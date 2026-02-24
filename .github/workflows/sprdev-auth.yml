@@ -1,6 +1,10 @@
 ### basic test to connect to development tenant using federated authentication
 name: SPR Basic Authentication
 
+permissions:
+  id-token: write
+  contents: write
+
 on: 
     workflow_call:
         secrets:
@@ -10,9 +14,27 @@ on:
 
 
 jobs:
-  triage:
+  connect-test:
     runs-on: ubuntu-latest
+
     steps:
-    - uses: actions/labeler@v6
-      with:
-        repo-token: ${{ secrets.token }}
+      - name: 'Az CLI login'
+        uses: azure/login@8c334a195cbb38e46038007b304988d888bf676a
+        with:
+          client-id: 'acc66743-905d-4d9b-8298-d729599935b1'
+          tenant-id: 'd3e62a06-7979-468d-a1a1-110e7c24c8d1'
+          subscription-id: '0d2418fb-f792-4c1f-bba9-7aa272c0d231'
+    # Install PnP
+      - name: Install PowerShell and PnP PowerShell
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y powershell
+          pwsh -Command "Install-Module PnP.PowerShell -Force -Scope CurrentUser"
+          
+    #connect pnp federated    
+      - name: Export SharePoint PnP site template (secure cert)
+        shell: pwsh
+        run: |
+          $token = az account get-access-token --resource https://bsispdev.sharepoint.com --query accessToken -o tsv
+          Connect-PnPOnline -Url "https://bsispdev.sharepoint.com" -AccessToken $token
+          Get-PnPWeb
