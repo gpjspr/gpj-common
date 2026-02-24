@@ -1,0 +1,18 @@
+### basic test to connect to development tenant using federated authentication
+name: SPR Basic Authentication
+
+on: 
+    workflow_call:
+        secrets:
+            token:
+                required: true
+
+
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/labeler@v6
+      with:
+        repo-token: ${{ secrets.token }}
