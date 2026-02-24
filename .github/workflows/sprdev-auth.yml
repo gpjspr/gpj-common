@@ -7,11 +7,6 @@ permissions:
 
 on: 
     workflow_call:
-        secrets:
-            token:
-                required: true
-
-
 
 jobs:
   connect-test:
@@ -37,4 +32,5 @@ jobs:
         run: |
           $token = az account get-access-token --resource https://bsispdev.sharepoint.com --query accessToken -o tsv
           Connect-PnPOnline -Url "https://bsispdev.sharepoint.com" -AccessToken $token
+
           Get-PnPWeb
