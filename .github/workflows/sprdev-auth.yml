@@ -38,6 +38,10 @@ jobs:
     # Install PAC (either via Power Platform Actions installer, or your own install method)
       - name: Install PAC CLI
         uses: microsoft/powerplatform-actions/actions-install@v1
+        
+      - name: Add PAC to PATH
+        run: echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+        
     #try pac
       - name: PAC federated
         shell: bash
@@ -49,6 +53,7 @@ jobs:
             --applicationId "acc66743-905d-4d9b-8298-d729599935b1" \
             --environment "https://orgd78efd2a.crm11.dynamics.com"
           pac auth who
+
 
 
 
