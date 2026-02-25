@@ -35,10 +35,14 @@ jobs:
           Connect-PnPOnline -Url "https://bsispdev.sharepoint.com" -AccessToken $token
 
           Get-PnPWeb
+    # Install PAC (either via Power Platform Actions installer, or your own install method)
+      - name: Install PAC CLI
+        uses: microsoft/powerplatform-actions/actions-install@v1
     #try pac
       - name: PAC federated
         shell: bash
         run: |
           pac auth create --name 'pacfed' --githubFederated --tenant 'd3e62a06-7979-468d-a1a1-110e7c24c8d1' --applicationId 'acc66743-905d-4d9b-8298-d729599935b1' --environment 'https://orgd78efd2a.api.crm11.dynamics.com'
           pac auth who
+
 
