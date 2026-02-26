@@ -33,6 +33,7 @@
   {"name":"measuringcamera","value":"mcm"},
   {"name":"microphone","value":"mic"},
   {"name":"microsoftstream","value":"str"},
+  {"name":"numberinput","value":"num"},
   {"name":"pdfviewer","value":"pdf"},
   {"name":"peninput","value":"pen"},
   {"name":"powerbitile","value":"pbi"},
@@ -59,4 +60,5 @@
   "rules": {
     "disallowNumericSuffix": true
   }
+
 }
