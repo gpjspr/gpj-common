@@ -14,7 +14,7 @@ on:
         type: string
       lint-path:
         required: false
-        default: .github/linters/canvasapp-lint.json
+        default: .github/linters/canvasapps-lint.json
         type: string
 
 jobs:
@@ -26,7 +26,7 @@ jobs:
       - name: Check Canvas Apps
         shell: pwsh
         run: |
-          ./github/linters/canvasapps-lint.ps1 `
+          ./github/linters/canvasapp-lint.ps1 `
             -Root "${{ inputs.root }}" `
             -ConfigPath "${{ inputs.lint-path }}"
     
