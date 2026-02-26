@@ -31,7 +31,10 @@ jobs:
           repository: gpjspr/gpj-common
           ref: main
           path: common
-          
+
+      - name: Debug repo structure
+        run: ls -R
+        
       - name: Check Canvas Apps
         shell: pwsh
         run: |
