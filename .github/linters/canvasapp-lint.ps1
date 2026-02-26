@@ -82,7 +82,7 @@ elseif (-not [string]::IsNullOrWhiteSpace($Root)) {
     # Scan: appsource/{appname}/src/**/*.yml|yaml
     Get-ChildItem -Path $Root -Directory -ErrorAction Stop |
         ForEach-Object {
-            $src = Join-Path $_.FullName "src"
+            $src = Join-Path $_.FullName "Src"
             if (Test-Path $src) {
                 Get-ChildItem -Path $src -Recurse -File -Include *.yml,*.yaml -ErrorAction SilentlyContinue
             }
@@ -191,4 +191,5 @@ foreach ($file in $fileList) {
 
 Write-Host ""
 Write-Host ("Completed. Files scanned: {0}   Failures: {1}   Warnings: {2}" -f $fileList.Count, $failCount, $warnCount)
+
 exit ([int]($failCount -gt 0))
