@@ -26,7 +26,7 @@ jobs:
       - name: Check Canvas Apps
         shell: pwsh
         run: |
-          .github/linters/canvasapps-lint.ps1 `
+          ./github/linters/canvasapps-lint.ps1 `
             -Root "${{ inputs.root }}" `
             -ConfigPath "${{ inputs.lint-path }}"
     
