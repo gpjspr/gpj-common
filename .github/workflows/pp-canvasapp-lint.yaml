@@ -1,0 +1,32 @@
+---
+name: Canvas App Lint
+
+permissions:
+  id-token: write
+  contents: write
+
+on:
+  workflow_call:
+    inputs:
+      root:
+        required: false
+        default: appsource
+        type: string
+      lint-path:
+        required: false
+        default: .github/linters/canvasapps-lint.json
+        type: string
+
+jobs:
+  connect-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: action/checkout@4
+      - name: Check Canvas Apps
+        shell: pwsh
+        run: |
+          .github/linters/canvasapps-lint.ps1 `
+            -Root "${{ inputs.root }}" `
+            -ConfigPath "${{ inputs.lint-path }}"
+    
