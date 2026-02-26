@@ -14,7 +14,7 @@ on:
         type: string
       lint-path:
         required: false
-        default: .github/linters/canvasapps-lint.json
+        default: .github/linters/canvasapp-lint.json
         type: string
 
 jobs:
