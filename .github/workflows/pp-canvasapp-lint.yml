@@ -28,7 +28,7 @@ jobs:
       - name: Checkout common lint repo
         uses: actions/checkout@v4
         with:
-          repository: your-org/common-repo
+          repository: gpjspr/gpj-common
           ref: main
           path: common
           
