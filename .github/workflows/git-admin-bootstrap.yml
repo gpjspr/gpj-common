@@ -65,7 +65,7 @@ jobs:
             -f wait_timer=0 \
             -f deployment_branch_policy[protected_branches]=false \
             -f deployment_branch_policy[custom_branch_policies]=true \
-            -f reviewers[][type]=Team \
+            -f reviewers[][type]=User \
             -f reviewers[][id]="${PROD_TEAM_ID}"
 
           echo "== Clean existing deployment-branch-policies for UAT =="
