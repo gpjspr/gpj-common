@@ -1,0 +1,95 @@
+---
+name: Bootstrap repo environments (test/uat/prod)
+
+on:
+  workflow_dispatch:
+    inputs:
+      repo:
+        description: "Target repo name (without owner), e.g. my-solution-app"
+        required: true
+      prod_reviewer_team_id:
+        description: "GitHub Team ID to require as PROD approvers (numeric), e.g. 123456"
+        required: true
+      uat_branch_pattern:
+        description: "Branch pattern allowed to deploy to UAT"
+        required: true
+        default: "uat/*"
+      prod_tag_pattern:
+        description: "Tag pattern allowed to deploy to PROD"
+        required: true
+        default: "prod-*"
+
+permissions:
+  contents: read
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Configure environments + protection rules via GitHub API
+        shell: bash
+        env:
+          # IMPORTANT:
+          # Use a token that can administer the target repo environments.
+          # - Fine-grained PAT: needs "Actions: Read and write" + "Environments: Read and write" (and repo access)
+          # - Classic PAT: typically needs "repo" (private) / "public_repo" (public) and admin permissions as needed
+          GH_TOKEN: ${{ secrets.GH_ADMIN_TOKEN }}
+
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ inputs.repo }}
+
+          PROD_TEAM_ID: ${{ inputs.prod_reviewer_team_id }}
+          UAT_PATTERN: ${{ inputs.uat_branch_pattern }}
+          PROD_PATTERN: ${{ inputs.prod_tag_pattern }}
+        run: |
+          set -euo pipefail
+
+          echo "Target: ${OWNER}/${REPO}"
+
+          # ---- Helpers ----
+          api() {
+            gh api -H "Accept: application/vnd.github+json" "$@"
+          }
+
+          echo "== Create/Update UAT environment (no required reviewers) =="
+          api -X PUT "repos/${OWNER}/${REPO}/environments/uat" \
+            -f wait_timer=0 \
+            -f deployment_branch_policy[protected_branches]=false \
+            -f deployment_branch_policy[custom_branch_policies]=true
+
+          echo "== Create/Update PROD environment (required reviewers: team ${PROD_TEAM_ID}) =="
+          # Required reviewers can be users or teams. Here we use a team.
+          # Note: reviewers field is an array of objects with {type,id}
+          api -X PUT "repos/${OWNER}/${REPO}/environments/prod" \
+            -f wait_timer=0 \
+            -f deployment_branch_policy[protected_branches]=false \
+            -f deployment_branch_policy[custom_branch_policies]=true \
+            -f reviewers[][type]=Team \
+            -f reviewers[][id]="${PROD_TEAM_ID}"
+
+          echo "== Clean existing deployment-branch-policies for UAT =="
+          # List existing policies, delete them, then add the desired one.
+          # (Keeps idempotent even if you re-run.)
+          UAT_IDS=$(api "repos/${OWNER}/${REPO}/environments/uat/deployment-branch-policies" --jq '.branch_policies[].id' || true)
+          for id in ${UAT_IDS:-}; do
+            api -X DELETE "repos/${OWNER}/${REPO}/environments/uat/deployment-branch-policies/${id}"
+          done
+
+          echo "== Restrict UAT to branches matching: ${UAT_PATTERN} =="
+          api -X POST "repos/${OWNER}/${REPO}/environments/uat/deployment-branch-policies" \
+            -f name="${UAT_PATTERN}"
+
+          echo "== Clean existing deployment-branch-policies for PROD =="
+          PROD_IDS=$(api "repos/${OWNER}/${REPO}/environments/prod/deployment-branch-policies" --jq '.branch_policies[].id' || true)
+          for id in ${PROD_IDS:-}; do
+            api -X DELETE "repos/${OWNER}/${REPO}/environments/prod/deployment-branch-policies/${id}"
+          done
+
+          echo "== Restrict PROD to tags matching: ${PROD_PATTERN} =="
+          api -X POST "repos/${OWNER}/${REPO}/environments/prod/deployment-branch-policies" \
+            -f name="${PROD_PATTERN}"
+
+          echo "Done."
+          echo "UAT: allowed ref pattern = ${UAT_PATTERN}"
+          echo "PROD: required reviewers = Team(${PROD_TEAM_ID}), allowed ref pattern = ${PROD_PATTERN}"
