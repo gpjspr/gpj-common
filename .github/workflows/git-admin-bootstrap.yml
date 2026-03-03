@@ -78,7 +78,7 @@ jobs:
             },
             "reviewers": [
               {
-                "type": "Team",
+                "type": "User",
                 "id": '"${PROD_TEAM_ID}"'
               }
             ]
