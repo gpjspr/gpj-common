@@ -7,9 +7,11 @@ on:
       repo:
         description: "Target repo name (without owner), e.g. my-solution-app"
         required: true
+        default: "tempdb"
       prod_reviewer_team_id:
         description: "GitHub Team ID to require as PROD approvers (numeric), e.g. 123456"
         required: true
+        default: "253314747"
       uat_branch_pattern:
         description: "Branch pattern allowed to deploy to UAT"
         required: true
@@ -66,7 +68,7 @@ jobs:
           }
           EOF
 
-          echo "== Create/Update PROD environment (required reviewer: user ${PROD_REVIEWER_USER_ID}) =="
+          echo "== Create/Update PROD environment (required reviewer: user ${PROD_TEAM_ID}) =="
 
           gh api -X PUT "repos/${OWNER}/${REPO}/environments/prod" \
             -H "Accept: application/vnd.github+json" \
