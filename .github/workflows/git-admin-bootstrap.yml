@@ -53,20 +53,36 @@ jobs:
           }
 
           echo "== Create/Update UAT environment (no required reviewers) =="
-          api -X PUT "repos/${OWNER}/${REPO}/environments/uat" \
-            -f wait_timer=0 \
-            -f deployment_branch_policy[protected_branches]=false \
-            -f deployment_branch_policy[custom_branch_policies]=true
+          gh api -X PUT repos/${OWNER}/${REPO}/environments/uat \
+            -H "Accept: application/vnd.github+json" \
+            --input - <<'EOF'
+          {
+            "wait_timer": 0,
+            "deployment_branch_policy": {
+              "protected_branches": false,
+              "custom_branch_policies": true
+            }
+          }
+          EOF
 
           echo "== Create/Update PROD environment (required reviewers: team ${PROD_TEAM_ID}) =="
-          # Required reviewers can be users or teams. Here we use a team.
-          # Note: reviewers field is an array of objects with {type,id}
-          api -X PUT "repos/${OWNER}/${REPO}/environments/prod" \
-            -f wait_timer=0 \
-            -f deployment_branch_policy[protected_branches]=false \
-            -f deployment_branch_policy[custom_branch_policies]=true \
-            -f reviewers[][type]=User \
-            -f reviewers[][id]="${PROD_TEAM_ID}"
+          gh api -X PUT repos/${OWNER}/${REPO}/environments/prod \
+            -H "Accept: application/vnd.github+json" \
+            --input - <<'EOF'
+          {
+            "wait_timer": 0,
+            "deployment_branch_policy": {
+              "protected_branches": false,
+              "custom_branch_policies": true
+            },
+            "reviewers": [
+              {
+                "type": "Team",
+                "id": '"${PROD_TEAM_ID}"'
+              }
+            ]
+          }
+          EOF
 
           echo "== Clean existing deployment-branch-policies for UAT =="
           # List existing policies, delete them, then add the desired one.
