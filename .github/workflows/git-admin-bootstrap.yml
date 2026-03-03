@@ -51,7 +51,8 @@ jobs:
           api() {
             gh api -H "Accept: application/vnd.github+json" "$@"
           }
-
+          echo "OWNER=${OWNER}"
+          echo "REPO=${REPO}"
           echo "== Create/Update UAT environment (no required reviewers) =="
           gh api -X PUT repos/${OWNER}/${REPO}/environments/uat \
             -H "Accept: application/vnd.github+json" \
