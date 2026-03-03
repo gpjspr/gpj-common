@@ -66,12 +66,12 @@ jobs:
           }
           EOF
 
-          echo "== Create/Update PROD environment (required reviewers: user ${PROD_TEAM_ID}) =="
-          gh api -X PUT repos/${OWNER}/${REPO}/environments/prod \
+          echo "== Create/Update PROD environment (required reviewer: user ${PROD_REVIEWER_USER_ID}) =="
+
+          gh api -X PUT "repos/${OWNER}/${REPO}/environments/prod" \
             -H "Accept: application/vnd.github+json" \
-            --input - <<'EOF'
+            --input - <<EOF
           {
-            
             "deployment_branch_policy": {
               "protected_branches": false,
               "custom_branch_policies": true
