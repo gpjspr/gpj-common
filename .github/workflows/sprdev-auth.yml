@@ -19,7 +19,8 @@ jobs:
         with:
           client-id: 'acc66743-905d-4d9b-8298-d729599935b1'
           tenant-id: 'd3e62a06-7979-468d-a1a1-110e7c24c8d1'
-          subscription-id: '0d2418fb-f792-4c1f-bba9-7aa272c0d231'
+          #continue-on-error: subscription-id: '0d2418fb-f792-4c1f-bba9-7aa272c0d231'
+          allow-no-subscriptions: true
     # Install PnP
       - name: Install PowerShell and PnP PowerShell
         run: |
