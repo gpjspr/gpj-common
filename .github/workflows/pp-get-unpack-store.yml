@@ -12,11 +12,11 @@ on:
       major:
         description: 'The major version (the first solution number). If left blank, the current major version will be used.'
         required: false
-        type: number
+        type: string
       minor:
         description: 'The minor version (the second solution number). If left blank, the current minor version will be used.'
         required: false
-        type: number
+        type: string
      
 env:
   BUILD_VERSION: 1.0.0.0
