@@ -30,7 +30,7 @@ jobs:
       - name: Checkout common lint repo
         uses: actions/checkout@v4
         with:
-          repository: edfenergy/nucops-apps-plt-infra
+          repository: gpjspr/gpj-common
           ref: main
           path: common
 
