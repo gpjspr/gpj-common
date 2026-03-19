@@ -3,7 +3,7 @@ name: Canvas App Lint
 
 permissions:
   id-token: write
-  contents: write
+  contents: read
 
 on:
   workflow_call:
@@ -14,31 +14,48 @@ on:
         type: string
       lint-path:
         required: false
-        default: .github/linters/canvasapps-lint.json
+        default: .github/linters/pp-canvasapps-lint.json
         type: string
 
 jobs:
-  connect-test:
+  lint:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check project repo
+ 
+      - name: Checkout project repo
         uses: actions/checkout@v4
 
+ 
       - name: Checkout common lint repo
         uses: actions/checkout@v4
         with:
-          repository: gpjspr/gpj-common
+          repository: edfenergy/nucops-apps-plt-infra
           ref: main
           path: common
 
-      - name: Debug repo structure
-        run: ls -R
-        
-      - name: Check Canvas Apps
+ 
+      - name: Ensure PowerShell
+        run: |
+          pwsh --version
+
+     
+      - name: Run Canvas App Lint
         shell: pwsh
         run: |
-          ./common/.github/linters/canvasapp-lint.ps1 `
-            -Root "${{ inputs.root }}" `
-            -ConfigPath "./common/${{ inputs.lint-path }}"
-    
+          $root = "${{ inputs.root }}"
+          $config = "./common/${{ inputs.lint-path }}"
+
+          if (!(Test-Path $root)) {
+            Write-Error "Root path '$root' does not exist"
+            exit 1
+          }
+
+          if (!(Test-Path $config)) {
+            Write-Error "Config path '$config' does not exist"
+            exit 1
+          }
+
+          ./common/.github/linters/pp-canvasapps-lint.ps1 `
+            -Root $root `
+            -ConfigPath $config
