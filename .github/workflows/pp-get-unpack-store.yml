@@ -254,6 +254,10 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      #install xmllint
+      - name: Install xmllint
+        run: sudo apt-get update && sudo apt-get install -y libxml2-utils
+
       # Check solution for missing dependencies warn if found
       - name: Check solution.xml for missing dependencies
         shell: bash
@@ -272,7 +276,7 @@ jobs:
             echo "::warning::Found $MISSING_COUNT missing dependencies in solution.xml"
       
             # Create a concise table: Dependent | Required
-            echo "### ⚠️ Missing Dependencies in ${{ inputs.solutionname }}" >> $GITHUB_STEP_SUMMARY
+            echo "###  Missing Dependencies in ${{ inputs.solutionname }}" >> $GITHUB_STEP_SUMMARY
             echo "| Dependent | Required |" >> $GITHUB_STEP_SUMMARY
             echo "|-----------|---------|" >> $GITHUB_STEP_SUMMARY
       
