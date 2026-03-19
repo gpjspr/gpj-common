@@ -59,3 +59,10 @@ jobs:
           ./common/.github/linters/pp-canvasapps-lint.ps1 `
             -Root $root `
             -ConfigPath $config
+
+      - name: Display Summary
+        if: always()
+        run: |
+          Write-Host "### Canvas App Lint Summary"
+          Get-Content $env:GITHUB_STEP_SUMMARY
+
