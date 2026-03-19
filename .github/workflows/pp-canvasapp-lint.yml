@@ -52,7 +52,7 @@ jobs:
             exit 1
           }
 
-          ./common/.github/linters/pp-canvasapps-lint.ps1.ps1 `
+          ./common/.github/linters/pp-canvasapps-lint.ps1 `
             -Root $root `
             -ConfigPath $config
 
