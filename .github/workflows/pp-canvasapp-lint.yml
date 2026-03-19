@@ -72,7 +72,4 @@ jobs:
         with:
           name: canvas-lint-full
           path: common/canvas-lint-full.md
-          if (-not [string]::IsNullOrEmpty($summaryFile) -and (Test-Path $summaryFile)) {
-              Write-Host "### Canvas App Lint Summary"
-              Get-Content $summaryFile | ForEach-Object { Write-Host $_ }
-          }
+          
