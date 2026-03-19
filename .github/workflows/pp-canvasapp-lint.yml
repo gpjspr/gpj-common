@@ -22,11 +22,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
- 
       - name: Checkout project repo
         uses: actions/checkout@v4
 
- 
       - name: Checkout common lint repo
         uses: actions/checkout@v4
         with:
@@ -34,12 +32,10 @@ jobs:
           ref: main
           path: common
 
- 
       - name: Ensure PowerShell
         run: |
           pwsh --version
 
-     
       - name: Run Canvas App Lint
         shell: pwsh
         run: |
@@ -56,14 +52,16 @@ jobs:
             exit 1
           }
 
-          ./common/.github/linters/pp-canvasapps-lint.ps1 `
+          ./common/.github/linters/Check-CanvasYaml.ps1 `
             -Root $root `
             -ConfigPath $config
 
       - name: Display Summary
-        if: always()
+        if: always()   # always show summary even if lint fails
         shell: pwsh
         run: |
-          Write-Host "### Canvas App Lint Summary"
-          Get-Content $env:GITHUB_STEP_SUMMARY
-
+          $summaryFile = $env:GITHUB_STEP_SUMMARY
+          if (-not [string]::IsNullOrEmpty($summaryFile) -and (Test-Path $summaryFile)) {
+              Write-Host "### Canvas App Lint Summary"
+              Get-Content $summaryFile | ForEach-Object { Write-Host $_ }
+          }
