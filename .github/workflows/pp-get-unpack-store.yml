@@ -177,48 +177,43 @@ jobs:
           echo "Using temp directory: $TMP_DIR"
           
           # Loop over all .msapp files
-          find "$SOL_PATH" -type f -name "*.msapp" | while read -r MSAPP_FILE; do
-              echo "Processing: $MSAPP_FILE"
-          
-              # Make temp zip path
-              ZIP_FILE="$TMP_DIR/$(basename "$MSAPP_FILE" .msapp).zip"
-          
-              # Copy and rename .msapp to .zip
-              cp "$MSAPP_FILE" "$ZIP_FILE"
-          
-              # Extract 'Properties.json' from zip without unzipping everything
-              PROP_JSON=$(unzip -p "$ZIP_FILE" "Properties.json") || {
-                  echo "Properties.json not found in $MSAPP_FILE"
-                  continue
-              }
-          
-              # Extract 'name' value using jq
-              APP_NAME=$(echo "$PROP_JSON" | jq -r '.Name')
-              if [[ -z "$APP_NAME" || "$APP_NAME" == "null" ]]; then
-                  echo "Could not find 'name' in Properties.json of $MSAPP_FILE"
-                  continue
-              fi
-              echo "App name: $APP_NAME"
-          
-              # Create target folder in appsource
-              TARGET_DIR="appsource/$APP_NAME"
-              mkdir -p "$TARGET_DIR"
-          
-              # Extract entire zip into target folder (overwrite)
-              # Extract entire zip into target folder (overwrite)
-              if unzip -t "$ZIP_FILE" >/dev/null 2>&1; then
-                  unzip -o "$ZIP_FILE" -d "$TARGET_DIR"
-                  echo "Copied contents to $TARGET_DIR"
-              else
-                  echo "Skipping invalid zip: $ZIP_FILE"
-                  continue
-              fi
-          
-              echo "Copied contents to $TARGET_DIR"
-          
-              # Clean up temp zip
-              rm -f "$ZIP_FILE"
-          done
+          while read -r MSAPP_FILE; do
+            echo "Processing: $MSAPP_FILE"
+        
+            ZIP_FILE="$TMP_DIR/$(basename "$MSAPP_FILE" .msapp).zip"
+        
+            cp "$MSAPP_FILE" "$ZIP_FILE"
+        
+            PROP_JSON=$(unzip -p "$ZIP_FILE" "Properties.json" 2>/dev/null) || {
+                echo "Properties.json not found in $MSAPP_FILE"
+                continue
+            }
+        
+            APP_NAME=$(echo "$PROP_JSON" | jq -r '.Name' 2>/dev/null || echo "")
+            if [[ -z "$APP_NAME" || "$APP_NAME" == "null" ]]; then
+                echo "Could not find 'Name' in Properties.json of $MSAPP_FILE"
+                continue
+            fi
+        
+            echo "App name: $APP_NAME"
+        
+            TARGET_DIR="appsource/$APP_NAME"
+            mkdir -p "$TARGET_DIR"
+        
+            if unzip -t "$ZIP_FILE" >/dev/null 2>&1; then
+                unzip -o "$ZIP_FILE" -d "$TARGET_DIR" || {
+                    echo "Unzip failed for $ZIP_FILE"
+                    continue
+                }
+                echo "Copied contents to $TARGET_DIR"
+            else
+                echo "Skipping invalid zip: $ZIP_FILE"
+                continue
+            fi
+        
+            rm -f "$ZIP_FILE"
+        
+        done < <(find "$SOL_PATH" -type f -name "*.msapp")
           
           # Remove temporary directory
           rmdir "$TMP_DIR"
