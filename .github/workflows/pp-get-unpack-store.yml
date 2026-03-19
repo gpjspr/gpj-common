@@ -30,8 +30,9 @@ jobs:
     name: Export Solution
     runs-on: ubuntu-latest
 
-        # Checkout the CALLING repo (not the shared repo)
+       
     steps:
+       # Checkout the CALLING repo (not the shared repo)
       - name: Checkout repo
         uses: actions/checkout@v4
 
@@ -226,6 +227,8 @@ jobs:
           rm -rf "$TMP_DIR"
           
           echo "Done!"
+
+      # commit the changes
       - name: Commit changes
         run: |
           git config --global user.name "github-actions"
@@ -234,7 +237,52 @@ jobs:
           git status
           git diff --stat
           git commit -m "Automated extract of ${{ inputs.solutionname }}"
-      
+
+      # push to the repo
       - name: Push changes
         if: success()
         run: git push origin HEAD
+
+  check-dependencies-job:
+    name: Check solution for dependencies
+    runs-on: ubuntu-latest
+
+    steps:
+    
+      # Checkout the CALLING repo (not the shared repo)
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # Check solution for missing dependencies warn if found
+      - name: Check solution.xml for missing dependencies
+        shell: bash
+        run: |
+          SOLUTION_XML="solutions/${{ inputs.solutionname }}/Other/Solution.xml"
+      
+          if [[ ! -f "$SOLUTION_XML" ]]; then
+            echo "::warning::solution.xml not found at $SOLUTION_XML"
+            exit 0
+          fi
+      
+          # Count missing dependencies
+          MISSING_COUNT=$(xmllint --xpath 'count(//MissingDependencies/MissingDependency)' "$SOLUTION_XML" 2>/dev/null)
+      
+          if [[ "$MISSING_COUNT" -gt 0 ]]; then
+            echo "::warning::Found $MISSING_COUNT missing dependencies in solution.xml"
+      
+            # Create a concise table: Dependent | Required
+            echo "### ⚠️ Missing Dependencies in ${{ inputs.solutionname }}" >> $GITHUB_STEP_SUMMARY
+            echo "| Dependent | Required |" >> $GITHUB_STEP_SUMMARY
+            echo "|-----------|---------|" >> $GITHUB_STEP_SUMMARY
+      
+            # Loop through each MissingDependency
+            for i in $(seq 1 "$MISSING_COUNT"); do
+              DEP=$(xmllint --xpath "string(//MissingDependencies/MissingDependency[$i]/Dependent/@displayName)" "$SOLUTION_XML" 2>/dev/null)
+              REQ=$(xmllint --xpath "string(//MissingDependencies/MissingDependency[$i]/Required/@displayName)" "$SOLUTION_XML" 2>/dev/null)
+              echo "| $DEP | $REQ |" >> $GITHUB_STEP_SUMMARY
+              echo "  Dependent: $DEP, Required: $REQ"
+            done
+      
+          else
+            echo "No missing dependencies found in solution.xml"
+          fi
