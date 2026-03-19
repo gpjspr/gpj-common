@@ -57,10 +57,21 @@ jobs:
             -ConfigPath $config
 
       - name: Display Summary
-        if: always()   # always show summary even if lint fails
+        if: always()
         shell: pwsh
         run: |
           $summaryFile = $env:GITHUB_STEP_SUMMARY
+          if (-not [string]::IsNullOrEmpty($summaryFile) -and (Test-Path $summaryFile)) {
+              Write-Host "### Canvas App Lint Summary"
+              Get-Content $summaryFile | ForEach-Object { Write-Host $_ }
+          }
+      
+      - name: Upload full lint artifact
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: canvas-lint-full
+          path: common/canvas-lint-full.md
           if (-not [string]::IsNullOrEmpty($summaryFile) -and (Test-Path $summaryFile)) {
               Write-Host "### Canvas App Lint Summary"
               Get-Content $summaryFile | ForEach-Object { Write-Host $_ }
