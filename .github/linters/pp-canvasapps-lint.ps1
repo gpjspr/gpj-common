@@ -1,3 +1,8 @@
+<#
+Check-CanvasYaml.ps1
+Lint Canvas App YAML files with GitHub Actions annotations and full markdown output.
+#>
+
 param(
     [Parameter(Mandatory)]
     [string]$ConfigPath,
@@ -7,11 +12,12 @@ param(
     [string]$Root = ""
 )
 
+# --- Validate config ---
 if (-not (Test-Path -LiteralPath $ConfigPath)) { throw "Config file not found: $ConfigPath" }
 $config = Get-Content -LiteralPath $ConfigPath -Raw | ConvertFrom-Json
 
-# Prefix lookup
-$prefixByName = @{ }
+# --- Prefix lookup ---
+$prefixByName = @{}
 foreach ($c in $config.controls) { $prefixByName[$c.name.ToLower()] = $c.value }
 
 $varPrefix = $config.variables.globalPrefix
@@ -19,19 +25,25 @@ $locPrefix = $config.variables.contextPrefix
 $colPrefix = $config.variables.collectionPrefix
 $checkNumericSuffix = [bool]$config.rules.disallowNumericSuffix
 
-# Lists to capture all issues
+# --- Lists to capture issues ---
 $failList = @()
 $warnList = @()
 
-function Write-Fail { param($File, $LineNumber, $Name, $Reason)
+# --- Functions ---
+function Write-Fail {
+    param($File, $LineNumber, $Name, $Reason)
     $failList += [PSCustomObject]@{ File=$File; Line=$LineNumber; Name=$Name; Reason=$Reason }
+    Write-Host "::error file=$File,line=$LineNumber::[FAIL] $Name - $Reason"
 }
 
-function Write-Warn { param($File, $LineNumber, $Name, $Reason)
+function Write-Warn {
+    param($File, $LineNumber, $Name, $Reason)
     $warnList += [PSCustomObject]@{ File=$File; Line=$LineNumber; Name=$Name; Reason=$Reason }
+    Write-Host "::warning file=$File,line=$LineNumber::[WARN] $Name - $Reason"
 }
 
-function Get-ControlNameFromAboveLine { param([string[]]$Lines,[int]$ControlLineIndex)
+function Get-ControlNameFromAboveLine {
+    param([string[]]$Lines,[int]$ControlLineIndex)
     for ($j = $ControlLineIndex - 1; $j -ge 0; $j--) {
         $l = $Lines[$j]
         if ($l -match '^\s*(?:-\s*)?(.+?)\s*:\s*$') {
@@ -43,13 +55,13 @@ function Get-ControlNameFromAboveLine { param([string[]]$Lines,[int]$ControlLine
     return $null
 }
 
-# Regexes
+# --- Regexes ---
 $rxSet           = [regex]'(?i)\bSet\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*,'
 $rxClearCollect  = [regex]'(?i)\bClearCollect\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*,'
 $rxCollect       = [regex]'(?i)\bCollect\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*,'
 $rxUpdateContext = [regex]'(?i)\bUpdateContext\s*\(\s*\{([^}]*)\}'
 
-# Resolve files
+# --- Resolve files ---
 $fileList = New-Object System.Collections.Generic.List[string]
 if ($Paths -and $Paths.Count -gt 0) {
     foreach ($p in $Paths) { if (Test-Path $p) { $fileList.Add((Resolve-Path $p).Path) } }
@@ -98,30 +110,34 @@ foreach ($file in $fileList) {
 }
 
 # --- GitHub UI annotations (top 50) ---
-$failList | Select-Object -First 50 | ForEach-Object { $f = $_; Write-Host "::error file=$($f.File),line=$($f.Line)::[FAIL] $($f.Name) - $($f.Reason)" }
-$warnList | Select-Object -First 50 | ForEach-Object { $w = $_; Write-Host "::warning file=$($w.File),line=$($w.Line)::[WARN] $($w.Name) - $($w.Reason)" }
+$failList | Select-Object -First 50 | ForEach-Object { $f=$_; Write-Host "::error file=$($f.File),line=$($f.Line)::[FAIL] $($f.Name) - $($f.Reason)" }
+$warnList | Select-Object -First 50 | ForEach-Object { $w=$_; Write-Host "::warning file=$($w.File),line=$($w.Line)::[WARN] $($w.Name) - $($w.Reason)" }
 
 # --- Step summary ---
+if (-not $env:GITHUB_STEP_SUMMARY) { $env:GITHUB_STEP_SUMMARY = "./canvas-lint-summary.md" }
 $summaryFile = $env:GITHUB_STEP_SUMMARY
-if (-not [string]::IsNullOrEmpty($summaryFile)) {
-    if ($failList.Count -gt 0) {
-        Add-Content $summaryFile "`n### :x: Failures ($($failList.Count))"
-        Add-Content $summaryFile "| File | Line | Name | Reason |"
-        Add-Content $summaryFile "|------|------|------|--------|"
-        $failList | ForEach-Object { Add-Content $summaryFile "| $($_.File) | $($_.Line) | $($_.Name) | $($_.Reason) |" }
-    }
-    if ($warnList.Count -gt 0) {
-        Add-Content $summaryFile "`n### :warning: Warnings ($($warnList.Count))"
-        Add-Content $summaryFile "| File | Line | Name | Reason |"
-        Add-Content $summaryFile "|------|------|------|--------|"
-        $warnList | ForEach-Object { Add-Content $summaryFile "| $($_.File) | $($_.Line) | $($_.Name) | $($_.Reason) |" }
-    }
 
-    # Write full artifact file for download
-    $artifactPath = "./common/canvas-lint-full.md"
-    Copy-Item -Path $summaryFile -Destination $artifactPath -Force
+if ($failList.Count -gt 0) {
+    Add-Content $summaryFile "`n### :x: Failures ($($failList.Count))"
+    Add-Content $summaryFile "| File | Line | Name | Reason |"
+    Add-Content $summaryFile "|------|------|------|--------|"
+    $failList | ForEach-Object { Add-Content $summaryFile "| $($_.File) | $($_.Line) | $($_.Name) | $($_.Reason) |" }
 }
+if ($warnList.Count -gt 0) {
+    Add-Content $summaryFile "`n### :warning: Warnings ($($warnList.Count))"
+    Add-Content $summaryFile "| File | Line | Name | Reason |"
+    Add-Content $summaryFile "|------|------|------|--------|"
+    $warnList | ForEach-Object { Add-Content $summaryFile "| $($_.File) | $($_.Line) | $($_.Name) | $($_.Reason) |" }
+}
+
+# --- Artifact (downloadable) ---
+$artifactPath = "./common/canvas-lint-full.md"
+$failList + $warnList | ForEach-Object { 
+    $line = "| $($_.File) | $($_.Line) | $($_.Name) | $($_.Reason) |"
+    $line | Out-File $artifactPath -Append -Encoding utf8
+}
+
 Write-Host "Lint completed. Failures: $($failList.Count), Warnings: $($warnList.Count)"
 
-# Exit with code 1 if any failures
+# --- Exit code ---
 if ($failList.Count -gt 0) { exit 1 } else { exit 0 }
