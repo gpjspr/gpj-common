@@ -246,6 +246,7 @@ jobs:
   check-dependencies-job:
     name: Check solution for dependencies
     runs-on: ubuntu-latest
+    needs: export-solution
 
     steps:
     
