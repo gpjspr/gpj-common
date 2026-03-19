@@ -205,7 +205,14 @@ jobs:
               mkdir -p "$TARGET_DIR"
           
               # Extract entire zip into target folder (overwrite)
-              unzip -o "$ZIP_FILE" -d "$TARGET_DIR"
+              # Extract entire zip into target folder (overwrite)
+              if unzip -t "$ZIP_FILE" >/dev/null 2>&1; then
+                  unzip -o "$ZIP_FILE" -d "$TARGET_DIR"
+                  echo "Copied contents to $TARGET_DIR"
+              else
+                  echo "Skipping invalid zip: $ZIP_FILE"
+                  continue
+              fi
           
               echo "Copied contents to $TARGET_DIR"
           
