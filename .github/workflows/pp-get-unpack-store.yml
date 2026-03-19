@@ -201,10 +201,15 @@ jobs:
             mkdir -p "$TARGET_DIR"
         
             if unzip -t "$ZIP_FILE" >/dev/null 2>&1; then
-                unzip -o "$ZIP_FILE" -d "$TARGET_DIR" || {
-                    echo "Unzip failed for $ZIP_FILE"
+                unzip -o "$ZIP_FILE" -d "$TARGET_DIR"
+                UNZIP_EXIT=$?
+                
+                if [[ $UNZIP_EXIT -gt 1 ]]; then
+                    echo "Unzip FAILED (code $UNZIP_EXIT) for $ZIP_FILE"
                     continue
-                }
+                else
+                    echo "Unzip completed (code $UNZIP_EXIT) for $ZIP_FILE"
+                fi
                 echo "Copied contents to $TARGET_DIR"
             else
                 echo "Skipping invalid zip: $ZIP_FILE"
@@ -216,6 +221,6 @@ jobs:
           done < <(find "$SOL_PATH" -type f -name "*.msapp")
           
           # Remove temporary directory
-          rmdir "$TMP_DIR"
+          rmdir -rf "$TMP_DIR"
           
           echo "Done!"
