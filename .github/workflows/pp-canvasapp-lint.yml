@@ -62,6 +62,7 @@ jobs:
 
       - name: Display Summary
         if: always()
+        shell: pwsh
         run: |
           Write-Host "### Canvas App Lint Summary"
           Get-Content $env:GITHUB_STEP_SUMMARY
