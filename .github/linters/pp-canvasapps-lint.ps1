@@ -1,3 +1,11 @@
+<#
+Check-CanvasYaml.ps1
+
+Usage:
+  ./Check-CanvasYaml.ps1 -ConfigPath ".config/canvas-naming-rules.json" -Root "appsource"
+  ./Check-CanvasYaml.ps1 -ConfigPath ".config/canvas-naming-rules.json" -Paths @("appsource/App1/src/Screens.yaml")
+#>
+
 param(
     [Parameter(Mandatory)]
     [string]$ConfigPath,
@@ -7,11 +15,12 @@ param(
     [string]$Root = ""
 )
 
-if (-not (Test-Path $ConfigPath)) { throw "Config file not found: $ConfigPath" }
-$config = Get-Content -Raw -Path $ConfigPath | ConvertFrom-Json
+# --- Load config ---
+if (-not (Test-Path -LiteralPath $ConfigPath)) { throw "Config file not found: $ConfigPath" }
+$config = Get-Content -LiteralPath $ConfigPath -Raw | ConvertFrom-Json
 
-# --- Prefix lookups ---
-$prefixByName = @{}
+# Prefix lookup
+$prefixByName = @{ }
 foreach ($c in $config.controls) { $prefixByName[$c.name.ToLower()] = $c.value }
 
 $varPrefix = $config.variables.globalPrefix
@@ -19,21 +28,29 @@ $locPrefix = $config.variables.contextPrefix
 $colPrefix = $config.variables.collectionPrefix
 $checkNumericSuffix = [bool]$config.rules.disallowNumericSuffix
 
-# --- Lists for issues ---
+# --- Lists for errors/warnings ---
 $failList = @()
 $warnList = @()
 
-function Write-Fail { param($File, $LineNumber, $Name, $Reason)
+function Write-Fail {
+    param($File, $LineNumber, $Name, $Reason)
     $failList += [PSCustomObject]@{ File=$File; Line=$LineNumber; Name=$Name; Reason=$Reason }
-    Write-Host $LineNumber
+    if ($failList.Count -le 50) {
+        Write-Host "::error file=$File,line=$LineNumber::[FAIL] $Name - $Reason"
+    }
 }
 
-function Write-Warn { param($File, $LineNumber, $Name, $Reason)
+function Write-Warn {
+    param($File, $LineNumber, $Name, $Reason)
     $warnList += [PSCustomObject]@{ File=$File; Line=$LineNumber; Name=$Name; Reason=$Reason }
-    Write-Host $LineNumber
+    if ($warnList.Count -le 50) {
+        Write-Host "::warning file=$File,line=$LineNumber::[WARN] $Name - $Reason"
+    }
 }
 
-function Get-ControlNameFromAboveLine { param([string[]]$Lines,[int]$ControlLineIndex)
+# --- Helper: get control name ---
+function Get-ControlNameFromAboveLine {
+    param([string[]]$Lines,[int]$ControlLineIndex)
     for ($j = $ControlLineIndex - 1; $j -ge 0; $j--) {
         $l = $Lines[$j]
         if ($l -match '^\s*(?:-\s*)?(.+?)\s*:\s*$') {
@@ -45,7 +62,7 @@ function Get-ControlNameFromAboveLine { param([string[]]$Lines,[int]$ControlLine
     return $null
 }
 
-# Regexes
+# --- Regexes for variable/collection/context ---
 $rxSet           = [regex]'(?i)\bSet\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*,'
 $rxClearCollect  = [regex]'(?i)\bClearCollect\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*,'
 $rxCollect       = [regex]'(?i)\bCollect\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*,'
@@ -59,7 +76,7 @@ if ($Paths -and $Paths.Count -gt 0) {
     if (-not (Test-Path $Root)) { throw "Root not found: $Root" }
     Get-ChildItem -Path $Root -Directory | ForEach-Object {
         $src = Join-Path $_.FullName "Src"
-        if (Test-Path $src) { 
+        if (Test-Path $src) {
             Get-ChildItem -Path $src -Recurse -File -Include *.yml,*.yaml | ForEach-Object { $fileList.Add($_.FullName) }
         }
     }
@@ -67,7 +84,7 @@ if ($Paths -and $Paths.Count -gt 0) {
 
 if ($fileList.Count -eq 0) { Write-Host "No YAML files found."; exit 0 }
 
-# --- Scan files ---
+# --- Scan all files ---
 foreach ($file in $fileList) {
     $lines = Get-Content -LiteralPath $file
     for ($i = 0; $i -lt $lines.Count; $i++) {
@@ -78,7 +95,10 @@ foreach ($file in $fileList) {
             $controlType = $Matches[1]
             $controlKey = $controlType.ToLower().Replace("classic/","")
             $controlName = Get-ControlNameFromAboveLine -Lines $lines -ControlLineIndex $i
-            if (-not $controlName) { Write-Fail -File $file -LineNumber $lineNo -Name "<unknown>" -Reason "Cannot find control name above Control: $controlType"; continue }
+            if ([string]::IsNullOrWhiteSpace($controlName)) {
+                Write-Fail -File $file -LineNumber $lineNo -Name "<unknown>" -Reason "Cannot find control name above Control: $controlType"
+                continue
+            }
             $expectedPrefix = if ($prefixByName.ContainsKey($controlKey)) { $prefixByName[$controlKey] } else { $null }
             if (-not $expectedPrefix) { Write-Warn -File $file -LineNumber $lineNo -Name $controlName -Reason "No prefix mapping for Control: $controlType" }
 
@@ -88,61 +108,62 @@ foreach ($file in $fileList) {
             if ($reasons.Count -gt 0) { Write-Fail -File $file -LineNumber $lineNo -Name $controlName -Reason ($reasons -join "; ") }
         }
 
-        # Variable / Collection / Context checks
+        # Variable / collection / context checks
         foreach ($m in $rxSet.Matches($line)) { $name=$m.Groups[1].Value; if (-not $name.ToLower().StartsWith($varPrefix.ToLower())) { Write-Fail -File $file -LineNumber $lineNo -Name $name -Reason "VAR PREFIX expected '$varPrefix' (Set())" } }
         foreach ($m in $rxClearCollect.Matches($line)) { $name=$m.Groups[1].Value; if (-not $name.ToLower().StartsWith($colPrefix.ToLower())) { Write-Fail -File $file -LineNumber $lineNo -Name $name -Reason "COL PREFIX expected '$colPrefix' (ClearCollect())" } }
         foreach ($m in $rxCollect.Matches($line)) { $name=$m.Groups[1].Value; if (-not $name.ToLower().StartsWith($colPrefix.ToLower())) { Write-Fail -File $file -LineNumber $lineNo -Name $name -Reason "COL PREFIX expected '$colPrefix' (Collect())" } }
         foreach ($m in $rxUpdateContext.Matches($line)) {
             $inner=$m.Groups[1].Value
-            [regex]::Matches($inner,'([A-Za-z_][A-Za-z0-9_]*)\s*:') | ForEach-Object { $key=$_.Groups[1].Value; if (-not $key.ToLower().StartsWith($locPrefix.ToLower())) { Write-Fail -File $file -LineNumber $lineNo -Name $key -Reason "LOC PREFIX expected '$locPrefix' (UpdateContext())" } }
+            [regex]::Matches($inner,'([A-Za-z_][A-Za-z0-9_]*)\s*:') | ForEach-Object {
+                $key=$_.Groups[1].Value
+                if (-not $key.ToLower().StartsWith($locPrefix.ToLower())) { Write-Fail -File $file -LineNumber $lineNo -Name $key -Reason "LOC PREFIX expected '$locPrefix' (UpdateContext())" }
+            }
         }
     }
 }
 
-# --- Step summary: Table of file-level counts ---
-$summaryFile = $env:GITHUB_STEP_SUMMARY
-if (-not $summaryFile) { $summaryFile = "./canvas-lint-summary.md" }
-
-# Calculate counts per file
-$files = $failList + $warnList | Select-Object -ExpandProperty File -Unique
-Add-Content $summaryFile "`n### :clipboard: Canvas App Lint Summary"
-Add-Content $summaryFile "| File Name | Count of Errors | Count of Warnings |"
-Add-Content $summaryFile "|-----------|----------------|-----------------|"
-foreach ($f in $files) {
-    $errorCount = ($failList | Where-Object { $_.File -eq $f }).Count
-    $warnCount  = ($warnList | Where-Object { $_.File -eq $f }).Count
-    Add-Content $summaryFile "| $f | $errorCount | $warnCount |"
-}
-
-# --- Optionally output each issue to console ---
-$failList | ForEach-Object { Write-Host "[FAIL] $($_.File):$($_.Line) $($_.Name) - $($_.Reason)" -ForegroundColor Red }
-$warnList | ForEach-Object { Write-Host "[WARN] $($_.File):$($_.Line) $($_.Name) - $($_.Reason)" -ForegroundColor Yellow }
-
-# --- Artifact: full markdown tables ---
-$artifactDir = "./common"
-if (-not (Test-Path $artifactDir)) { New-Item -ItemType Directory -Path $artifactDir | Out-Null }
-$artifactPath = Join-Path $artifactDir "canvas-lint-full.md"
+# --- Artifact file ---
+$artifactFile = "./common/canvas-lint-full.md"
+"# Canvas App Lint Full Report" | Out-File -FilePath $artifactFile -Encoding UTF8
 
 # Write failures
-@"
-# Canvas App Lint Full Report
-
-## Failures ($($failList.Count))
-| File | Line | Name | Reason |
-|------|------|------|--------|
-"@ | Set-Content -Path $artifactPath -Encoding utf8
-$failList | ForEach-Object { "| $($_.File) | $($_.Line) | $($_.Name) | $($_.Reason) |" | Add-Content -Path $artifactPath -Encoding utf8 }
+if ($failList.Count -gt 0) {
+    Add-Content $artifactFile "`n### :x: Failures ($($failList.Count))"
+    Add-Content $artifactFile "| File | Line | Name | Reason |"
+    Add-Content $artifactFile "|------|------|------|--------|"
+    foreach ($f in $failList) {
+        Add-Content $artifactFile "| $($f.File) | $($f.Line) | $($f.Name) | $($f.Reason) |"
+    }
+}
 
 # Write warnings
 if ($warnList.Count -gt 0) {
-    Add-Content -Path $artifactPath -Value "`n## Warnings ($($warnList.Count))"
-    Add-Content -Path $artifactPath -Value "| File | Line | Name | Reason |"
-    Add-Content -Path $artifactPath -Value "|------|------|------|--------|"
-    $warnList | ForEach-Object { "| $($_.File) | $($_.Line) | $($_.Name) | $($_.Reason) |" | Add-Content -Path $artifactPath -Encoding utf8 }
+    Add-Content $artifactFile "`n### :warning: Warnings ($($warnList.Count))"
+    Add-Content $artifactFile "| File | Line | Name | Reason |"
+    Add-Content $artifactFile "|------|------|------|--------|"
+    foreach ($w in $warnList) {
+        Add-Content $artifactFile "| $($w.File) | $($w.Line) | $($w.Name) | $($w.Reason) |"
+    }
+}
+
+# --- Step summary ---
+if ($env:GITHUB_STEP_SUMMARY) {
+    # Full artifact
+    Get-Content $artifactFile | Add-Content $env:GITHUB_STEP_SUMMARY
+
+    # File-level summary
+    $files = ($failList + $warnList | Select-Object -ExpandProperty File -Unique)
+    Add-Content $env:GITHUB_STEP_SUMMARY "`n### :clipboard: File Summary"
+    Add-Content $env:GITHUB_STEP_SUMMARY "| File Name | Count of Errors | Count of Warnings |"
+    Add-Content $env:GITHUB_STEP_SUMMARY "|-----------|----------------|-----------------|"
+    foreach ($f in $files) {
+        $errors = ($failList | Where-Object { $_.File -eq $f }).Count
+        $warns  = ($warnList | Where-Object { $_.File -eq $f }).Count
+        Add-Content $env:GITHUB_STEP_SUMMARY "| $f | $errors | $warns |"
+    }
 }
 
 Write-Host "Lint completed. Failures: $($failList.Count), Warnings: $($warnList.Count)"
-Write-Host "Full artifact available at $artifactPath"
 
 # Exit code
 if ($failList.Count -gt 0) { exit 1 } else { exit 0 }
