@@ -24,9 +24,7 @@ function Write-Warn {
     Write-Host "::warning file=$File,line=$LineNumber::[WARN] $Name - $Reason"
 }
 
-# ... run your lint logic as before ...
 
-# After scanning all files, output tables to step summary
 $summaryFile = $env:GITHUB_STEP_SUMMARY
 
 if ($failList.Count -gt 0) {
@@ -46,6 +44,10 @@ if ($warnList.Count -gt 0) {
         Add-Content $summaryFile "| $($w.File) | $($w.Line) | $($w.Name) | $($w.Reason) |"
     }
 }
+
+Write-Host "GITHUB_STEP_SUMMARY=$env:GITHUB_STEP_SUMMARY"
+Write-Host "FailList.Count=$($failList.Count)"
+Write-Host "WarnList.Count=$($warnList.Count)"
 
 # Exit 1 only if there are failures
 exit ([int]($failList.Count -gt 0))
