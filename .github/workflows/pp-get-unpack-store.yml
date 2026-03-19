@@ -177,6 +177,7 @@ jobs:
           echo "Using temp directory: $TMP_DIR"
           
           # Loop over all .msapp files
+          set +e
           while read -r MSAPP_FILE; do
             echo "Processing: $MSAPP_FILE"
         
@@ -219,6 +220,7 @@ jobs:
             rm -f "$ZIP_FILE"
         
           done < <(find "$SOL_PATH" -type f -name "*.msapp")
+          set -e
           
           # Remove temporary directory
           rmdir -rf "$TMP_DIR"
