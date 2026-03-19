@@ -167,8 +167,53 @@ jobs:
       # Unpack the canvas app to source
       - name: Unpack canvas app to source
         run: |
-          set -e
-          SRC="$GITHUB_WORKSPACE"
-          cp "$GITHUB_WORKSPACE/solutions/${{ inputs.solutionname }}/CanvasApps/${{ vars.PP_CANVASAPP_NAME }}.msapp" "$GITHUB_WORKSPACE/solutions/${{ inputs.solutionname }}/CanvasApps/${{ vars.PP_CANVASAPP_NAME }}.zip"
-          unzip -o "$GITHUB_WORKSPACE/solutions/${{ inputs.solutionname }}/CanvasApps/${{ vars.PP_CANVASAPP_NAME }}.zip" -d $GITHUB_WORKSPACE/appsource/${{ inputs.solutionname }} || true
-          rm "$GITHUB_WORKSPACE/solutions/${{ inputs.solutionname }}/CanvasApps/${{ vars.PP_CANVASAPP_NAME }}.zip"
+          set -euo pipefail
+
+          # Path to unpacked solution
+          SOL_PATH="solutions/${{ inputs.solutionname }}"
+          
+          # Temp directory for zips
+          TMP_DIR="$(mktemp -d)"
+          echo "Using temp directory: $TMP_DIR"
+          
+          # Loop over all .msapp files
+          find "$SOL_PATH" -type f -name "*.msapp" | while read -r MSAPP_FILE; do
+              echo "Processing: $MSAPP_FILE"
+          
+              # Make temp zip path
+              ZIP_FILE="$TMP_DIR/$(basename "$MSAPP_FILE" .msapp).zip"
+          
+              # Copy and rename .msapp to .zip
+              cp "$MSAPP_FILE" "$ZIP_FILE"
+          
+              # Extract 'Properties.json' from zip without unzipping everything
+              PROP_JSON=$(unzip -p "$ZIP_FILE" "Properties.json") || {
+                  echo "Properties.json not found in $MSAPP_FILE"
+                  continue
+              }
+          
+              # Extract 'name' value using jq
+              APP_NAME=$(echo "$PROP_JSON" | jq -r '.name')
+              if [[ -z "$APP_NAME" || "$APP_NAME" == "null" ]]; then
+                  echo "Could not find 'name' in Properties.json of $MSAPP_FILE"
+                  continue
+              fi
+              echo "App name: $APP_NAME"
+          
+              # Create target folder in appsource
+              TARGET_DIR="appsource/$APP_NAME"
+              mkdir -p "$TARGET_DIR"
+          
+              # Extract entire zip into target folder (overwrite)
+              unzip -o "$ZIP_FILE" -d "$TARGET_DIR"
+          
+              echo "Copied contents to $TARGET_DIR"
+          
+              # Clean up temp zip
+              rm -f "$ZIP_FILE"
+          done
+          
+          # Remove temporary directory
+          rmdir "$TMP_DIR"
+          
+          echo "Done!"
