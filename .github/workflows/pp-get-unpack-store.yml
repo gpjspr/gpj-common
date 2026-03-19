@@ -213,7 +213,7 @@ jobs:
         
             rm -f "$ZIP_FILE"
         
-        done < <(find "$SOL_PATH" -type f -name "*.msapp")
+          done < <(find "$SOL_PATH" -type f -name "*.msapp")
           
           # Remove temporary directory
           rmdir "$TMP_DIR"
