@@ -25,10 +25,12 @@ $warnList = @()
 
 function Write-Fail { param($File, $LineNumber, $Name, $Reason)
     $failList += [PSCustomObject]@{ File=$File; Line=$LineNumber; Name=$Name; Reason=$Reason }
+    Write-Host $LineNumber
 }
 
 function Write-Warn { param($File, $LineNumber, $Name, $Reason)
     $warnList += [PSCustomObject]@{ File=$File; Line=$LineNumber; Name=$Name; Reason=$Reason }
+    Write-Host $LineNumber
 }
 
 function Get-ControlNameFromAboveLine { param([string[]]$Lines,[int]$ControlLineIndex)
