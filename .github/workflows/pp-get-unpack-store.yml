@@ -223,6 +223,6 @@ jobs:
           set -e
           
           # Remove temporary directory
-          rmdir -rf "$TMP_DIR"
+          rm -rf "$TMP_DIR"
           
           echo "Done!"
