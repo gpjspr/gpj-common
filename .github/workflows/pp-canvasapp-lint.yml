@@ -68,7 +68,7 @@ jobs:
       
       - name: Upload full lint artifact
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: canvas-lint-full
           path: common/canvas-lint-full.md
