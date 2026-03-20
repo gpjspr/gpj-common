@@ -307,7 +307,6 @@ if ([string]::IsNullOrWhiteSpace($stepSummaryPath)) {
 
 Write-Host ""
 Write-Host ("Completed. Files scanned: {0}   Failures: {1}   Warnings: {2}" -f $fileList.Count, $failCount, $warnCount)
-Write-Host $warnings.Length
-Write-Host $failures.Length
+
 
 exit ([int]($failCount -gt 0))

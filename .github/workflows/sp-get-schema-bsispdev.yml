@@ -41,12 +41,13 @@ jobs:
         run: |
             mkdir -p sharepointconfig
         
-        # azure login
-      - name: 'Az CLI login'
-        uses: azure/login@8c334a195cbb38e46038007b304988d888bf676a
+        # Azure login (OIDC)
+      - name: Az CLI login
+        uses: azure/login@v2
         with:
-          client-id: ${{ env.AZ_CLIENT_ID}}
-          tenant-id: $${{ env.AZ_TENANT_ID}}
+            # these need to be EDF items. Do not need to store as variables, are constant. Are not secrets
+          client-id: ${{ env.AZ_CLIENT_ID }}
+          tenant-id: ${{ env.AZ_TENANT_ID }}
           allow-no-subscriptions: true
         
         #connect pnp and get schema 
