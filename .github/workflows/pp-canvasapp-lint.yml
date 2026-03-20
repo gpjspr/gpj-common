@@ -16,15 +16,22 @@ on:
         required: false
         default: .github/linters/pp-canvasapps-lint.json
         type: string
+      fail-on-errors:
+        required: false
+        default: true
+        type: boolean
 
 jobs:
   lint:
     runs-on: ubuntu-latest
 
     steps:
+
+        # checkout
       - name: Checkout project repo
         uses: actions/checkout@v4
 
+        #checkout common
       - name: Checkout common lint repo
         uses: actions/checkout@v4
         with:
@@ -32,11 +39,14 @@ jobs:
           ref: main
           path: common
 
+        # ensure powershell exists
       - name: Ensure PowerShell
         run: |
           pwsh --version
 
+        #run canvas app lint script
       - name: Run Canvas App Lint
+        id: linter
         shell: pwsh
         run: |
           $root = "${{ inputs.root }}"
@@ -55,7 +65,9 @@ jobs:
           ./common/.github/linters/pp-canvasapps-lint.ps1 `
             -Root $root `
             -ConfigPath $config
+            echo "exit_code=$?" >> $GITHUB_OUTPUT
 
+        # display summary
       - name: Display Summary
         if: always()
         shell: pwsh
@@ -66,10 +78,18 @@ jobs:
               Get-Content $summaryFile | ForEach-Object { Write-Host $_ }
           }
       
+        # publish artifact
       - name: Upload full lint artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: canvas-lint-full
           path: common/canvas-lint-full.md
+      
+        # do not fail if requested
+      - name: Fail if requested
+        if: ${{ inputs.fail-on-errors && steps.linter.outputs.exit_code != 0 }}
+        run: exit 1
+  
+
           

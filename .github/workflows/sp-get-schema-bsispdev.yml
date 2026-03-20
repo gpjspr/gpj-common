@@ -55,13 +55,13 @@ jobs:
             mkdir -p sharepointconfig
         
         #connect pnp and get schema 
-      - name: Export SharePoint PnP site template (secure cert)
+      - name: Export SharePoint PnP site template
         shell: pwsh
         run: |
           $token = az account get-access-token --resource https://bsispdev.sharepoint.com --query accessToken -o tsv
           Connect-PnPOnline -Url ${{ inputs.siteurl }} -AccessToken $token
 
-          Get-PnPSiteTemplate ${{ inputs.arguments }} -Out ./sharepointconfig/${{ inputs.solutionname }}.xml
+          Get-PnPSiteTemplate ${{ inputs.arguments }} -Out ./sharepointconfig/${{ inputs.solutionname }}.xml -Force
 
         # commit the changes
       - name: Commit changes
