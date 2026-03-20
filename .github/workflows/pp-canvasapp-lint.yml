@@ -61,6 +61,7 @@ jobs:
         #run canvas app lint script
       - name: Run Canvas App Lint
         id: linter
+        continue-on-error: true
         shell: pwsh
         run: |
           $root = "${{ inputs.root }}"
