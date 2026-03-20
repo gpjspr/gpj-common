@@ -57,7 +57,7 @@ jobs:
           $token = az account get-access-token --resource https://bsispdev.sharepoint.com --query accessToken -o tsv
           Connect-PnPOnline -Url ${{ inputs.siteurl }} -AccessToken $token
 
-          Get-PnPWeb ${{ inputs.arguments }} -Out ./sharepointconfig/${{ inputs.solutionname }}.xml
+          Get-PnPSiteTemplate ${{ inputs.arguments }} -Out ./sharepointconfig/${{ inputs.solutionname }}.xml
 
         # commit the changes
       - name: Commit changes
