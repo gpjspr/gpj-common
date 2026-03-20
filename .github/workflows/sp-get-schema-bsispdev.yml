@@ -36,11 +36,10 @@ jobs:
           sudo apt-get install -y powershell
           pwsh -Command "Install-Module PnP.PowerShell -Force -Scope CurrentUser"
 
-        # check sharepointconfig folder
-      - name: Check Solution folder
-        run: |
-            mkdir -p sharepointconfig
-        
+        # Checkout the CALLING repo (not the shared repo)
+      - name: Checkout repo
+        uses: actions/checkout@v4
+  
         # Azure login (OIDC)
       - name: Az CLI login
         uses: azure/login@v2
@@ -49,6 +48,11 @@ jobs:
           client-id: ${{ env.AZ_CLIENT_ID }}
           tenant-id: ${{ env.AZ_TENANT_ID }}
           allow-no-subscriptions: true
+
+        # check sharepointconfig folder
+      - name: Check Solution folder
+        run: |
+            mkdir -p sharepointconfig
         
         #connect pnp and get schema 
       - name: Export SharePoint PnP site template (secure cert)
