@@ -79,7 +79,10 @@ jobs:
           ./common/.github/linters/pp-canvasapps-lint.ps1 `
             -Root $root `
             -ConfigPath $config
-            echo "exit_code=$?" >> $GITHUB_OUTPUT
+            $exitCode = $LASTEXITCODE
+            echo "exit_code=$exitCode" >> $env:GITHUB_OUTPUT
+
+            exit 0
 
         # display summary
       - name: Display Summary
