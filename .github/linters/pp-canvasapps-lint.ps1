@@ -41,10 +41,10 @@ function Write-Fail {
         [string]$Reason
     )
     $failure = [PSCustomObject]@{
-        File = $file
-        Line = $LineNumber
-        Name = $Name
-        Error = $Reason
+        File = $file;
+        Line = $LineNumber;
+        Name = $Name;
+        Error = $Reason;
     }
     $failures += $failure
     Write-Host ("{0}  {1,6}  {2,-50}  FAIL  {3}" -f $File, $LineNumber, $Name, $Reason) -ForegroundColor Red
@@ -58,10 +58,10 @@ function Write-Warn {
         [string]$Reason
     )
     $warning = [PSCustomObject]@{
-        File = $file
-        Line = $LineNumber
-        Name = $Name
-        Error = $Reason
+        File = $file;
+        Line = $LineNumber;
+        Name = $Name;
+        Error = $Reason;
     }
     $warnings += $warning
     Write-Host ("{0}  {1,6}  {2,-50}  WARN  {3}" -f $File, $LineNumber, $Name, $Reason) -ForegroundColor Yellow
