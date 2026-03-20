@@ -10,7 +10,7 @@ on:
     inputs:
       root:
         required: false
-        default: appsource
+        default: src/appsource
         type: string
       lint-path:
         required: false
