@@ -46,7 +46,7 @@ function Write-Fail {
         Name = $Name;
         Error = $Reason;
     }
-    $script:$failures += $failure
+    $script:failures += $failure
     Write-Host ("{0}  {1,6}  {2,-50}  FAIL  {3}" -f $File, $LineNumber, $Name, $Reason) -ForegroundColor Red
 }
 
@@ -63,7 +63,7 @@ function Write-Warn {
         Name = $Name;
         Error = $Reason;
     }
-    $script:$warnings += $warning
+    $script:warnings += $warning
     Write-Host ("{0}  {1,6}  {2,-50}  WARN  {3}" -f $File, $LineNumber, $Name, $Reason) -ForegroundColor Yellow
 }
 
