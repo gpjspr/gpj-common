@@ -29,18 +29,32 @@ jobs:
 
         # checkout
       - name: Checkout project repo
+        id: checkout_project
         uses: actions/checkout@v4
 
         #checkout common
       - name: Checkout common lint repo
+        id: checkout_common
         uses: actions/checkout@v4
         with:
           repository: gpjspr/gpj-common
           ref: main
           path: common
 
+      
+        # Optional download if run as subsequent job: ignore failure if the artifact doesn't exist
+      - name: Try to download appsource artifact
+        id: download_appsource
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: appsource
+          path: src/appsource
+
+
         # ensure powershell exists
       - name: Ensure PowerShell
+        id: ensure_psh
         run: |
           pwsh --version
 
@@ -69,6 +83,7 @@ jobs:
 
         # display summary
       - name: Display Summary
+        id: display_summary
         if: always()
         shell: pwsh
         run: |
@@ -80,6 +95,7 @@ jobs:
       
         # publish artifact
       - name: Upload full lint artifact
+        id: publish_artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:

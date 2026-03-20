@@ -34,10 +34,12 @@ jobs:
     steps:
        # Checkout the CALLING repo (not the shared repo)
       - name: Checkout repo
+        id: check_repo_extract
         uses: actions/checkout@v4
 
         # Azure login (OIDC)
       - name: Az CLI login
+        id: az_authentiate
         uses: azure/login@v2
         with:
             # these need to be EDF items. Do not need to store as variables, are constant. Are not secrets
@@ -47,16 +49,19 @@ jobs:
      
       # Install PAC CLI
       - name: Install PAC CLI
+        id: install_pac
         uses: microsoft/powerplatform-actions/actions-install@v1
 
       # Ensure PAC is available
       - name: Add PAC to PATH
+        id: pac_path
         shell: bash
         run: |
           echo "$(dirname "${POWERPLATFORMTOOLS_PACPATH}")" >> "$GITHUB_PATH"
        
       #Authenticate to Power Platform
       - name: PAC federated
+        id: pac_authenticate
         shell: bash
         run: |
           pac auth create \
@@ -69,6 +74,7 @@ jobs:
 
       # check solution folder
       - name: Check Solution folder
+        id: check_folders
         run: |
             mkdir -p src/exports/unmanaged
             mkdir -p src/exports/managed
@@ -76,6 +82,7 @@ jobs:
 
       #change version number
       - name: Change Version Number of Solution in BUS-NOPS-DEV
+        id: change_build
         run: |
           pac solution list --json | head -n 5
           CURRENT_VERSION=$(pac solution list --json | jq -r '.[] | select(.SolutionUniqueName=="${{ inputs.solutionname }}") | .VersionNumber')
@@ -127,6 +134,7 @@ jobs:
      
       # Export solution as a zip
       - name: Export Unmanaged Solution
+        id: export_unamanged
         run: |
           pac solution export --path "./exports/unmanaged/${{ inputs.solutionname }}.zip" \
           --name "${{ inputs.solutionname }}" \
@@ -134,6 +142,7 @@ jobs:
           --overwrite
 
       - name: Export Managed Solution
+        id: export_managed
         run: |
           pac solution export --path "./exports/managed/${{ inputs.solutionname }}.zip" \
           --name "${{ inputs.solutionname }}" \
@@ -142,6 +151,7 @@ jobs:
 
       # Unpack unmanaged solution as code
       - name: Unpack Solution
+        id: unpack_solution
         run: |
           pac solution unpack --zipfile "./exports/unmanaged/${{ inputs.solutionname }}.zip" \
           --folder "src/solutions/${{ inputs.solutionname }}" \
@@ -150,10 +160,12 @@ jobs:
      
       #install xmllint
       - name: Install xmllint
+        id: install_xmllint_extract
         run: sudo apt-get update && sudo apt-get install -y libxml2-utils
 
       # Change managed flag in solution.xml for future build
       - name: Update Managed flag to Both
+        id: update_solution_xml
         run: |
           SOLUTION_XML="src/solutions/${{ inputs.solutionname }}/Other/Solution.xml"
 
@@ -166,8 +178,9 @@ jobs:
           save
           EOF
 
-      #create artifact for next job
+      #create solutionn.xml artifact for next job
       - name: Upload unpacked solution as artifact
+        id: artifact_xml
         uses: actions/upload-artifact@v4
         with:
           name: unpacked-solution
@@ -175,6 +188,7 @@ jobs:
 
       # Unpack the canvas app to source
       - name: Unpack canvas app to source
+        id: unpack_canvasapps
         run: |
           set -euo pipefail
 
@@ -236,8 +250,17 @@ jobs:
           
           echo "Done!"
 
+      #create canvas app artifact for lint
+      - name: Upload appsource
+        id: artifact_appsource
+        uses: actions/upload-artifact@v4
+        with:
+          name: unpacked-solution
+          path: src/appsource
+
       # commit the changes
       - name: Commit changes
+        id: commit_changes
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
@@ -248,6 +271,7 @@ jobs:
 
       # push to the repo
       - name: Push changes
+        id: push_repo
         if: success()
         run: git push origin HEAD
 
@@ -260,10 +284,12 @@ jobs:
     
       # Checkout the CALLING repo (not the shared repo)
       - name: Checkout repo
+        id: check_repo_dependencies
         uses: actions/checkout@v4
 
       
       - name: Download unpacked solution
+        id: download_artifact
         uses: actions/download-artifact@v4
         with:
           name: unpacked-solution
@@ -272,10 +298,12 @@ jobs:
 
       #install xmllint
       - name: Install xmllint
+        id: install_xmllint_dependencies
         run: sudo apt-get update && sudo apt-get install -y libxml2-utils
 
       # Check solution for missing dependencies warn if found
       - name: Check solution.xml for missing dependencies
+        id: check_dependencies
         shell: bash
         run: |
           SOLUTION_XML="src/solutions/${{ inputs.solutionname }}/Other/Solution.xml"

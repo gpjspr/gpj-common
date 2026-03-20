@@ -31,6 +31,7 @@ jobs:
     steps:
         # Install PnP
       - name: Install PowerShell and PnP PowerShell
+        id: install_pnp
         run: |
           sudo apt-get update
           sudo apt-get install -y powershell
@@ -38,10 +39,12 @@ jobs:
 
         # Checkout the CALLING repo (not the shared repo)
       - name: Checkout repo
+        id: checkout_repo
         uses: actions/checkout@v4
   
         # Azure login (OIDC)
       - name: Az CLI login
+        id: az_login
         uses: azure/login@v2
         with:
             # these need to be EDF items. Do not need to store as variables, are constant. Are not secrets
@@ -51,11 +54,13 @@ jobs:
 
         # check sharepointconfig folder
       - name: Check Solution folder
+        id: check_folders
         run: |
             mkdir -p sharepointconfig
         
         #connect pnp and get schema 
       - name: Export SharePoint PnP site template
+        id: export_sitetemplate
         shell: pwsh
         run: |
           $token = az account get-access-token --resource https://bsispdev.sharepoint.com --query accessToken -o tsv
@@ -65,6 +70,7 @@ jobs:
 
         # commit the changes
       - name: Commit changes
+        id: commit_changes
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
@@ -75,5 +81,6 @@ jobs:
 
       # push to the repo
       - name: Push changes
+        id: push_repo
         if: success()
         run: git push origin HEAD
