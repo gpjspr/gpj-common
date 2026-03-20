@@ -48,6 +48,7 @@ function Write-Fail {
     }
     $script:failures += $failure
     Write-Host ("{0}  {1,6}  {2,-50}  FAIL  {3}" -f $File, $LineNumber, $Name, $Reason) -ForegroundColor Red
+    return $failure
 }
 
 function Write-Warn {
@@ -134,6 +135,7 @@ foreach ($file in $fileList) {
             if ([string]::IsNullOrWhiteSpace($controlName)) {
                 $failCount++
                 Write-Fail -File $file -LineNumber $lineNo -Name "<unknown>" -Reason ("Could not find control name above Control: {0}" -f $controlType)
+
                 
                 continue
             }
@@ -206,6 +208,101 @@ foreach ($file in $fileList) {
             }
         }
     }
+}
+
+# --- GitHub Actions Step Summary (Markdown) ---
+# Build a per-file aggregation of warnings and failures
+$countsByFile = @{}
+foreach ($w in $warnings) {
+    if (-not $countsByFile.ContainsKey($w.File)) {
+        $countsByFile[$w.File] = [PSCustomObject]@{ Warnings = 0; Errors = 0 }
+    }
+    $countsByFile[$w.File].Warnings++
+}
+foreach ($f in $failures) {
+    if (-not $countsByFile.ContainsKey($f.File)) {
+        $countsByFile[$f.File] = [PSCustomObject]@{ Warnings = 0; Errors = 0 }
+    }
+    $countsByFile[$f.File].Errors++
+}
+
+function Escape-MarkdownPipe {
+    param([string]$s)
+    # Escape '|' to prevent table column breaks
+    return $s -replace '\|','\|'
+}
+
+$stepSummaryPath = $env:GITHUB_STEP_SUMMARY
+if ([string]::IsNullOrWhiteSpace($stepSummaryPath)) {
+    Write-Host "GITHUB_STEP_SUMMARY not set. Skipping Action summary markdown."
+} else {
+    $lines = New-Object System.Collections.Generic.List[string]
+
+    $lines.Add("# Canvas YAML Naming Check Summary")
+    $lines.Add("")
+    $lines.Add(("**Files scanned:** {0} &nbsp;&nbsp; **Failures:** {1} &nbsp;&nbsp; **Warnings:** {2}" -f $fileList.Count, $failCount, $warnCount))
+    $lines.Add("")
+    $lines.Add("| File | Warnings | Errors |")
+    $lines.Add("|--|--:|--:|")
+
+    if ($countsByFile.Count -gt 0) {
+        foreach ($kvp in $countsByFile.GetEnumerator() | Sort-Object { $_.Key }) {
+            $fileName = Escape-MarkdownPipe $kvp.Key
+            $w = $kvp.Value.Warnings
+            $e = $kvp.Value.Errors
+            $lines.Add(("| {0} | {1} | {2} |" -f $fileName, $w, $e))
+        }
+    } else {
+        $lines.Add("| _No issues found_ | 0 | 0 |")
+    }
+
+    # Optional: Collapsible detail sections
+    if ($countsByFile.Count -gt 0) {
+        $lines.Add("")
+        $lines.Add("## Details")
+        foreach ($fileKey in ($countsByFile.Keys | Sort-Object)) {
+            $fileHeader = Escape-MarkdownPipe $fileKey
+            $lines.Add("")
+            $lines.Add("<details>")
+            $lines.Add("<summary><strong>$fileHeader</strong></summary>")
+            $lines.Add("")
+            # Per-file warnings
+            $fileWarnings = $warnings | Where-Object { $_.File -eq $fileKey }
+            if ($fileWarnings.Count -gt 0) {
+                $lines.Add("**Warnings**")
+                $lines.Add("")
+                $lines.Add("| Line | Name | Message |")
+                $lines.Add("|--:|--|--|")
+                foreach ($w in $fileWarnings) {
+                    $nm = Escape-MarkdownPipe $w.Name
+                    $msg = Escape-MarkdownPipe $w.Error
+                    $lines.Add(("| {0} | {1} | {2} |" -f $w.Line, $nm, $msg))
+                }
+                $lines.Add("")
+            }
+            # Per-file errors
+            $fileErrors = $failures | Where-Object { $_.File -eq $fileKey }
+            if ($fileErrors.Count -gt 0) {
+                $lines.Add("**Errors**")
+                $lines.Add("")
+                $lines.Add("| Line | Name | Message |")
+                $lines.Add("|--:|--|--|")
+                foreach ($e in $fileErrors) {
+                    $nm = Escape-MarkdownPipe $e.Name
+                    $msg = Escape-MarkdownPipe $e.Error
+                    $lines.Add(("| {0} | {1} | {2} |" -f $e.Line, $nm, $msg))
+                }
+                $lines.Add("")
+            }
+            $lines.Add("</details>")
+        }
+    }
+
+    $lines.Add("")
+
+    # Append to GITHUB_STEP_SUMMARY
+    $content = [string]::Join([Environment]::NewLine, $lines)
+    $content | Out-File -FilePath $stepSummaryPath -Encoding utf8 -Append
 }
 
 Write-Host ""
