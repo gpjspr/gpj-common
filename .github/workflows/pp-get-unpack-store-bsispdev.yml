@@ -70,9 +70,9 @@ jobs:
       # check solution folder
       - name: Check Solution folder
         run: |
-            mkdir -p exports/unmanaged
-            mkdir -p exports/managed
-            mkdir -p "solutions/${{ inputs.solutionname }}"
+            mkdir -p src/exports/unmanaged
+            mkdir -p src/exports/managed
+            mkdir -p src/solutions/${{ inputs.solutionname }}"
 
       #change version number
       - name: Change Version Number of Solution in BUS-NOPS-DEV
@@ -144,7 +144,7 @@ jobs:
       - name: Unpack Solution
         run: |
           pac solution unpack --zipfile "./exports/unmanaged/${{ inputs.solutionname }}.zip" \
-          --folder "solutions/${{ inputs.solutionname }}" \
+          --folder "src/solutions/${{ inputs.solutionname }}" \
           --allowDelete true \
           --allowWrite
      
@@ -155,7 +155,7 @@ jobs:
       # Change managed flag in solution.xml for future build
       - name: Update Managed flag to Both
         run: |
-          SOLUTION_XML="solutions/${{ inputs.solutionname }}/Other/Solution.xml"
+          SOLUTION_XML="src/solutions/${{ inputs.solutionname }}/Other/Solution.xml"
 
           echo "Before change:"
           xmllint --xpath "string(//Managed)" "$SOLUTION_XML"
@@ -172,7 +172,7 @@ jobs:
           set -euo pipefail
 
           # Path to unpacked solution
-          SOL_PATH="solutions/${{ inputs.solutionname }}"
+          SOL_PATH="src/solutions/${{ inputs.solutionname }}"
           
           # Temp directory for zips
           TMP_DIR="$(mktemp -d)"
@@ -200,7 +200,7 @@ jobs:
         
             echo "App name: $APP_NAME"
         
-            TARGET_DIR="appsource/$APP_NAME"
+            TARGET_DIR="src/appsource/$APP_NAME"
             mkdir -p "$TARGET_DIR"
         
             if unzip -t "$ZIP_FILE" >/dev/null 2>&1; then
@@ -263,7 +263,7 @@ jobs:
       - name: Check solution.xml for missing dependencies
         shell: bash
         run: |
-          SOLUTION_XML="solutions/${{ inputs.solutionname }}/Other/Solution.xml"
+          SOLUTION_XML="src/solutions/${{ inputs.solutionname }}/Other/Solution.xml"
       
           if [[ ! -f "$SOLUTION_XML" ]]; then
             echo "::warning::solution.xml not found at $SOLUTION_XML"
