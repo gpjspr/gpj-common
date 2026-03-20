@@ -70,7 +70,6 @@ jobs:
       # check solution folder
       - name: Check Solution folder
         run: |
-            mkdir -p src/exports
             mkdir -p src/exports/unmanaged
             mkdir -p src/exports/managed
             mkdir -p src/solutions/${{ inputs.solutionname }}
