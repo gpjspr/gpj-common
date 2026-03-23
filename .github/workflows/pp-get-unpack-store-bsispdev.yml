@@ -186,7 +186,7 @@ jobs:
           name: unpacked-solution
           path: src/solutions/${{ inputs.solutionname }}
 
-      #create flow artifact for lint
+      #create flow artifact for flows
       - name: Upload workflows
         id: artifact_workflows
         uses: actions/upload-artifact@v4
@@ -263,7 +263,7 @@ jobs:
         id: artifact_appsource
         uses: actions/upload-artifact@v4
         with:
-          name: appsource
+          name: download-appsource
           path: src/appsource
 
       # commit the changes
@@ -297,10 +297,10 @@ jobs:
 
       
       - name: Download unpacked solution
-        id: download_artifact
+        id: download_solution_artifact
         uses: actions/download-artifact@v4
         with:
-          name: unpacked-solution
+          name: artifact-solution
           path: src/solutions/${{ inputs.solutionname }}
 
 
