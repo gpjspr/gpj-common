@@ -186,6 +186,14 @@ jobs:
           name: unpacked-solution
           path: src/solutions/${{ inputs.solutionname }}
 
+      #create flow artifact for lint
+      - name: Upload workflows
+        id: artifact_workflows
+        uses: actions/upload-artifact@v4
+        with:
+          name: appsource
+          path: src/solutions/${{ inputs.solutionname }}/Workflows
+
       # Unpack the canvas app to source
       - name: Unpack canvas app to source
         id: unpack_canvasapps
