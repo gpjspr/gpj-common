@@ -14,8 +14,10 @@ on:
 
 jobs:
   generate:
+    name: Generate Flow Diagrams
     runs-on: ubuntu-latest
-
+    continue-on-error: true
+    
     steps:
       - name: Checkout calling repo
         uses: actions/checkout@v4
