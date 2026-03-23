@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-INPUT_DIR="${1:-flows}"
-OUTPUT_DIR="output"
+INPUT_DIR="${1:?Input directory required}"
+OUTPUT_DIR="${2:-flow-diagrams}"
 
 mkdir -p "$OUTPUT_DIR"
 
