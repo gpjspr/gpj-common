@@ -154,7 +154,12 @@ jobs:
       # Change managed flag in solution.xml for future build
       - name: Update Managed flag to Both
         run: |
-          SOLUTION_XML="solutions/${{ inputs.solutionname }}/Other/Solution.xml"
+          SOLUTION_XML="$(find "solutions/${{ inputs.solutionname }}/Other" \
+          -maxdepth 1 \
+          -type f \
+          -iname "solution.xml" \
+          -print -quit)"
+
 
           echo "Before change:"
           xmllint --xpath "string(//Managed)" "$SOLUTION_XML"
