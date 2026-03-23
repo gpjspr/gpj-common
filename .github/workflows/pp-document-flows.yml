@@ -4,7 +4,7 @@ name: Generate Flow Diagrams
 on:
   workflow_call:
     inputs:
-      flow-path:
+      solutionname:
         required: true
         type: string
       output-path:
@@ -27,7 +27,14 @@ jobs:
         with:
           repository: your-org/common-repo
           path: common
-
+          
+      - name: Download unpacked solution
+        id: download_artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: solution-workflows
+          path: src/solutions/${{ inputs.solutionname }}/Workflows
+          
       - name: Install tools
         run: |
           sudo apt-get update
@@ -37,7 +44,7 @@ jobs:
         run: |
           chmod +x common/.github.utilities/generate-diagrams.sh
           common/scripts/generate-diagrams.sh \
-            "${{ inputs.flow-path }}" \
+            "src/solutions/${{ inputs.solutionname }}/Workflows" \
             "${{ inputs.output-path }}"
 
       - name: Commit diagrams
