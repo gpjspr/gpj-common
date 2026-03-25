@@ -14,7 +14,7 @@ on:
 
 jobs:
   generate:
-    name: Generate Flow Diagrams
+    name: Diagrams
     runs-on: ubuntu-latest
     continue-on-error: true
     
