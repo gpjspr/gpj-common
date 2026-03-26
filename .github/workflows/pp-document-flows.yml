@@ -25,14 +25,14 @@ jobs:
       - name: Checkout common repo (scripts)
         uses: actions/checkout@v4
         with:
-          repository: your-org/common-repo
+          repository: gpjspr/gpj-common
           path: common
           
       - name: Download unpacked solution
         id: download_artifact
         uses: actions/download-artifact@v4
         with:
-          name: solution-workflows
+          name: unpacked-solution
           path: src/solutions/${{ inputs.solutionname }}/Workflows
           
       - name: Install tools
