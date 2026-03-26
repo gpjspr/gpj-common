@@ -21,7 +21,7 @@ get_flow_name() {
 for json in "$INPUT_DIR"/*.json; do
 
   base=$(basename "$json" .json)
-  xml="$INPUT_DIR/$base.xml"
+  xml="$INPUT_DIR/$base.data.xml"
 
   if [[ ! -f "$xml" ]]; then
     echo "⚠️ No XML for $json, skipping"
