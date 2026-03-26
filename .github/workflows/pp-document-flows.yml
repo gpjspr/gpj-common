@@ -42,7 +42,7 @@ jobs:
 
       - name: Run generator
         run: |
-          chmod +x common/.github.utilities/generate-diagrams.sh
+          chmod +x common/.github/utilities/generate-diagrams.sh
           common/scripts/generate-diagrams.sh \
             "src/solutions/${{ inputs.solutionname }}/Workflows" \
             "${{ inputs.output-path }}"
