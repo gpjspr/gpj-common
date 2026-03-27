@@ -1,1 +1,90 @@
+---
+name: Update Configuration File
+permissions:
+  contents: write
+  id-token: write
+on:
+  workflow_call:
+    inputs:
+      solutionname:
+        description: 'The power platform solution name'
+        required: true
+        type: string
 
+jobs:
+  export-solution:
+    name: Update Configuration
+    runs-on: ubuntu-latest
+
+       
+    steps:
+       # Checkout the CALLING repo (not the shared repo)
+      - name: Checkout repo
+        id: check_repo_extract
+        uses: actions/checkout@v4
+
+             
+      # Install PAC CLI
+      - name: Install PAC CLI
+        id: install_pac
+        uses: microsoft/powerplatform-actions/actions-install@v1
+
+      # Ensure PAC is available
+      - name: Add PAC to PATH
+        id: pac_path
+        shell: bash
+        run: |
+          echo "$(dirname "${POWERPLATFORMTOOLS_PACPATH}")" >> "$GITHUB_PATH"
+
+      # Create temporary settings file
+      - name: Temporary Settings File
+        shell: pwsh
+        run: |
+          $settingsPath = "configuration/${{ inputs.solutionname }}-settings.json"
+          pac solution create-settings --solution-zip "./exports/unmanaged/${{ inputs.solutionname }}.zip" --settings-file $settingsPath
+          
+          $existingFile = "configuration/DEV/${{ inputs.solutionname }}-settings.json"
+          $tempFile = "configuration/${{ inputs.solutionname }}-settings.json"
+          
+          $existing = Get-Content $existingFile -Raw | ConvertFrom-Json
+          $new = Get-Content $tempFile -Raw | ConvertFrom-Json
+
+          foreach ($param in $new.EnvironmentVariables) {
+              $match = $existing.EnvironmentVariables | Where-Object { $_.SchemaName -eq $param.SchemaName }
+              if (-Not $match) {
+                  $missing += $param
+                  Write-Host "::warning::New setting detected: $($param.SchemaName)"
+                  $existing.EnvironmentVariables += $param
+              }
+          }
+      
+          if ($missing.Count -eq 0) {
+            Write-Host "No new settings detected."
+          }
+          else {
+            Write-Host "Updating $existingFile with new settings found
+            $existing | ConvertTo-Json -Depth 10 | Set-Content $existingFile
+            Write-Host "::warning::New settings were added to $existingFile - update TEST, UAT and PROD settings"
+          }
+          
+
+      # commit the changes
+      - name: Commit changes
+        id: commit_changes
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "actions@github.com"
+          git add .
+          git status
+          git diff --stat
+          git commit -m "Automated extract of ${{ inputs.solutionname }}"
+
+      # push to the repo
+      - name: Push changes
+        id: push_repo
+        if: success()
+        run: git push origin HEAD
+
+  
+            echo "No missing dependencies found in solution.xml"
+          fi
