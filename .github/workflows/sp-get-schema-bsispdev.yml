@@ -68,6 +68,45 @@ jobs:
 
           Get-PnPSiteTemplate ${{ inputs.arguments }} -Out ./sharepointconfig/${{ inputs.solutionname }}.xml -Force
 
+        # install xml tooling
+      - name: Install xmlstarlet
+        run: sudo apt-get install -y xmlstarlet
+
+        # update PnP file
+      - name: Update XML IDs
+        run: |
+          FILE="./sharepointconfig/${{ inputs.solutionname }}.xml"
+      
+          xmlstarlet ed -L \
+            -N pnp="http://schemas.dev.office.com/PnP/2022/09/ProvisioningSchema" \
+            -u "//pnp:Templates/@ID" -v "CONTAINER-${{ inputs.solutionname }}" \
+            -u "//pnp:ProvisioningTemplate/@ID" -v "TEMPLATE-${{ inputs.solutionname }}" \
+            "$FILE"
+
+          xmlstarlet ed -L \
+            -N pnp="http://schemas.dev.office.com/PnP/2022/09/ProvisioningSchema" \
+            -d "//pnp:ListInstance[@Title='Site Pages']" \
+            "$FILE"
+
+          xmlstarlet ed -L \
+            -N pnp="http://schemas.dev.office.com/PnP/2022/09/ProvisioningSchema" \
+            -d "//pnp:ListInstance[@Title='Version Lookup List']" \
+            "$FILE"
+
+          xmlstarlet ed -L \
+            -N pnp="http://schemas.dev.office.com/PnP/2022/09/ProvisioningSchema" \
+            -d "//pnp:ListInstance[@Title='SForm Templates']" \
+            "$FILE"
+
+          xmlstarlet ed -L \
+            -N pnp="http://schemas.dev.office.com/PnP/2022/09/ProvisioningSchema" \
+            -d "//pnp:ListInstance[@Title='Site Assets]" \
+            "$FILE"
+
+          xmlstarlet ed -L \
+            -N pnp="http://schemas.dev.office.com/PnP/2022/09/ProvisioningSchema" \
+            -d "//pnp:ListInstance[@Title='Style Library']" \
+            "$FILE"
         # commit the changes
       - name: Commit changes
         id: commit_changes
