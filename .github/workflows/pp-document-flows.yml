@@ -58,5 +58,7 @@ jobs:
             echo "No changes to commit"
           else
             git commit -m "Auto-generate flow diagrams"
-            git push
+            git pull --rebase origin ${GITHUB_REF_NAME}
+            git push origin HEAD:${GITHUB_REF_NAME}
           fi
+          
