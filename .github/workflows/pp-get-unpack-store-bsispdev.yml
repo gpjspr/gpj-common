@@ -375,3 +375,104 @@ jobs:
           else
             echo "No missing dependencies found in solution.xml"
           fi
+  #update configuration job        
+  update-configuration:
+    name: Process
+    runs-on: ubuntu-latest
+    needs: export-solution
+    if: needs.export-solution.outputs.config_exists == 'true'
+       
+    steps:
+       # Checkout the CALLING repo (not the shared repo)
+      - name: Checkout repo
+        id: check_repo_extract
+        uses: actions/checkout@v4
+
+             
+      # Install PAC CLI
+      - name: Install PAC CLI
+        id: install_pac
+        uses: microsoft/powerplatform-actions/actions-install@v1
+
+      # Ensure PAC is available
+      - name: Add PAC to PATH
+        id: pac_path
+        shell: bash
+        run: |
+          echo "$(dirname "${POWERPLATFORMTOOLS_PACPATH}")" >> "$GITHUB_PATH"
+
+      # Create temporary settings file
+      - name: Temporary Settings File
+        shell: pwsh
+        run: |
+          $settingsPath = "configuration/${{ inputs.solutionname }}-settings.json"
+          pac solution create-settings --solution-zip "./exports/unmanaged/${{ inputs.solutionname }}.zip" --settings-file $settingsPath
+          
+          $existingFile = "configuration/DEV/${{ inputs.solutionname }}-settings.json"
+          $tempFile = "configuration/${{ inputs.solutionname }}-settings.json"
+          
+          $existing = Get-Content $existingFile -Raw | ConvertFrom-Json
+          $new = Get-Content $tempFile -Raw | ConvertFrom-Json
+
+          $added = @()
+          $removed = @()
+          $summaryFile = $env:GITHUB_STEP_SUMMARY
+          
+          foreach ($param in $new.EnvironmentVariables) {
+              $match = $existing.EnvironmentVariables | Where-Object { $_.SchemaName -eq $param.SchemaName }
+              if (-Not $match) {
+                  $added += $param
+                  Write-Host "::warning::New setting detected: $($param.SchemaName)"
+                  $existing.EnvironmentVariables += $param
+              }
+          }
+
+          foreach ($param in $existing.EnvironmentVariables) {
+              if (-Not ($new.EnvironmentVariables | Where-Object { $_.SchemaName -eq $param.SchemaName })) {
+                  Write-Host "::warning::setting removed: $($param.SchemaName)"
+                  $removed += $param
+              }
+          }
+      
+          if ($added.Count -gt 0) {
+            Add-Content $summaryFile "### 🟢 New Settings Detected"
+            Add-Content $summaryFile "| SchemaName | DefaultValue |"
+            Add-Content $summaryFile "|------------|-------------|"
+            foreach ($param in $added) {
+                $defaultVal = if ($param.DefaultValue) { $param.DefaultValue } else { "" }
+                Add-Content $summaryFile "| $($param.SchemaName) | $defaultVal |"
+            }
+            Add-Content $summaryFile "`n"
+            
+            $existing | ConvertTo-Json -Depth 10 | Set-Content $existingFile
+          }
+          
+          if ($removed.Count -gt 0) {
+              Add-Content $summaryFile "### 🔴 Removed Settings Detected"
+              Add-Content $summaryFile "| SchemaName | DefaultValue |"
+              Add-Content $summaryFile "|------------|-------------|"
+              foreach ($param in $removed) {
+                  $defaultVal = if ($param.DefaultValue) { $param.DefaultValue } else { "" }
+                  Add-Content $summaryFile "| $($param.SchemaName) | $defaultVal |"
+              }
+              Add-Content $summaryFile "`n"
+          }
+
+          if (($added.Count -gt 0) -or ($removed.Count -gt 0)) {
+            Add-Content $summaryFile "### 🟠 Manually update the configuration files with values"
+            Add-Content $summaryFile "`n"
+          }
+          
+          
+
+      - name: Commit configuration changes
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update DEV configuration file"
+            git pull --rebase origin ${GITHUB_REF_NAME}
+            git push origin HEAD:${GITHUB_REF_NAME}
+          fi
