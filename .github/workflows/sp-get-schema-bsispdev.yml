@@ -66,7 +66,7 @@ jobs:
         run: |
           $token = az account get-access-token --resource https://bsispdev.sharepoint.com --query accessToken -o tsv
           Connect-PnPOnline -Url ${{ inputs.siteurl }} -AccessToken $token
-
+          Write-Host "${{ inputs.arguments }}"
           Get-PnPSiteTemplate ${{ inputs.arguments }} -Out ./sharepointconfig/${{ inputs.solutionname }}.xml -Force
 
         # install xml tooling
@@ -115,9 +115,13 @@ jobs:
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
           git add .
-          git status
-          git diff --stat
-          git commit -m "Automated extract of ${{ inputs.solutionname }}"
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update SharePoint schema file"
+            git pull --rebase origin ${GITHUB_REF_NAME}
+            git push origin HEAD:${GITHUB_REF_NAME}
+          fi
 
       # push to the repo
       - name: Push changes
