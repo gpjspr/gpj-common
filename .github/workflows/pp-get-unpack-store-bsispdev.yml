@@ -33,6 +33,16 @@ jobs:
       config_exists: ${{ steps.dev_settings_file.outputs.configexists }}
        
     steps:
+      #check branch exist if not dev
+      - name: Validate branch contains 'dev'
+        run: |
+          echo "Current branch: ${{ github.ref_name }}"
+
+          if [[ "${{ github.ref_name }}" != *dev* ]]; then
+            echo "::error title=Invalid branch::Branch must contain 'dev' to run this workflow"
+            exit 1
+          fi
+    
        # Checkout the CALLING repo (not the shared repo)
       - name: Checkout repo
         id: check_repo_extract
