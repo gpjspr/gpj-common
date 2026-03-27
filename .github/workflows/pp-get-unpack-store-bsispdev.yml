@@ -30,7 +30,7 @@ jobs:
     name: Export Solution
     runs-on: ubuntu-latest
     outputs:
-      config_exits: ${{ steps.dev_settings_file.outputs.configexists }}
+      config_exists: ${{ steps.dev_settings_file.outputs.configexists }}
        
     steps:
        # Checkout the CALLING repo (not the shared repo)
