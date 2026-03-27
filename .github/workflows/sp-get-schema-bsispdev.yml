@@ -64,14 +64,21 @@ jobs:
         id: export_sitetemplate
         shell: pwsh
         run: |
-          $args = "${{ inputs.arguments }}"
-          if ([string]::IsNullOrWhiteSpace($args)) {
-            $args = "-Handlers Lists"
+          $arguments = "${{ inputs.arguments }}"
+
+          # default if empty
+          if ([string]::IsNullOrWhiteSpace($arguments)) {
+              $handlers = @("Lists")
+          } else {
+              # very simple split (assumes format: "-Handlers Lists,Pages,ContentTypes")
+              if ($arguments -match "-Handlers\s+(.+)") {
+                  $handlers = $matches[1] -split ','
+              }
           }
-          $token = az account get-access-token --resource https://bsispdev.sharepoint.com --query accessToken -o tsv
-          Connect-PnPOnline -Url ${{ inputs.siteurl }} -AccessToken $token
-          Write-Host $args
-          Get-PnPSiteTemplate $args -Out ./sharepointconfig/${{ inputs.solutionname }}.xml -Force 
+          
+          Write-Host "Using handlers: $handlers"
+          
+          Get-PnPSiteTemplate -Out "./sharepointconfig/${{ inputs.solutionname }}.xml" -Handlers $handlers -Force
 
         # install xml tooling
       - name: Install xmlstarlet
