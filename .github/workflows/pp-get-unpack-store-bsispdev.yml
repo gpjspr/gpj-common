@@ -164,13 +164,13 @@ jobs:
         run: |
           $environments = @("DEV","TEST","UAT","PROD")
           foreach ($env in $environments) {
-            $settingsPath = "./configuration/$env/${{ inputs.solutionname }}.json"
+            $settingsPath = "/configuration/$env/${{ inputs.solutionname }}.json"
             
             if (-Not (Test-Path $settingsPath)) {
                 Write-Host "Solution settings file not found in $env. Generating..."
                 
                 pac solution create-settings `
-                  --solution-zip "${{ inputs.solutionname }}.zip" `
+                  --solution-zip "./exports/unmanaged/${{ inputs.solutionname }}.zip" `
                   --settings-file $settingsPath
             }
             else {
