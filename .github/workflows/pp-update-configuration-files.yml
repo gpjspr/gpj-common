@@ -49,25 +49,50 @@ jobs:
           $existing = Get-Content $existingFile -Raw | ConvertFrom-Json
           $new = Get-Content $tempFile -Raw | ConvertFrom-Json
 
-          $missing = @()
+          $added = @()
+          $removed = @()
           
           foreach ($param in $new.EnvironmentVariables) {
               $match = $existing.EnvironmentVariables | Where-Object { $_.SchemaName -eq $param.SchemaName }
               if (-Not $match) {
-                  $missing += $param
+                  $added += $param
                   Write-Host "::warning::New setting detected: $($param.SchemaName)"
                   $existing.EnvironmentVariables += $param
               }
           }
+
+          foreach ($param in $existing.EnvironmentVariables) {
+              if (-Not ($new.EnvironmentVariables | Where-Object { $_.SchemaName -eq $param.SchemaName })) {
+                  Write-Host "::warning::setting removed: $($param.SchemaName)"
+                  $removed += $param
+              }
+          }
       
-          if ($missing.Count -eq 0) {
-            Write-Host "No new settings detected."
-          }
-          else {
-            Write-Host "Updating $existingFile with new settings found"
+          if ($added.Count -gt 0) {
+            Write-Host "::warning::$($removed.Count) settings added - Manually update the configuration files with values"
+            Add-Content $summaryFile "### 🟢 New Settings Detected"
+            Add-Content $summaryFile "| SchemaName | DefaultValue |"
+            Add-Content $summaryFile "|------------|-------------|"
+            foreach ($param in $added) {
+                $defaultVal = if ($param.DefaultValue) { $param.DefaultValue } else { "" }
+                Add-Content $summaryFile "| $($param.SchemaName) | $defaultVal |"
+            }
+            Add-Content $summaryFile "`n"
             $existing | ConvertTo-Json -Depth 10 | Set-Content $existingFile
-            Write-Host "::warning::New settings were added to $existingFile - update TEST, UAT and PROD settings"
           }
+          
+          if ($removed.Count -gt 0) {
+            Write-Host "::error::$($removed.Count) settings removed - Manually update the configuration files"
+              Add-Content $summaryFile "### 🔴 Removed Settings Detected"
+              Add-Content $summaryFile "| SchemaName | DefaultValue |"
+              Add-Content $summaryFile "|------------|-------------|"
+              foreach ($param in $removed) {
+                  $defaultVal = if ($param.DefaultValue) { $param.DefaultValue } else { "" }
+                  Add-Content $summaryFile "| $($param.SchemaName) | $defaultVal |"
+              }
+              Add-Content $summaryFile "`n"
+          }
+          
           
 
       # commit the changes
