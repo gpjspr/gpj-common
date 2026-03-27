@@ -30,7 +30,7 @@ jobs:
     name: Export Solution
     runs-on: ubuntu-latest
     outputs:
-      configexits: ${{ steps.dev_settings_file.outputs.configexists }}
+      config_exits: ${{ steps.dev_settings_file.outputs.configexists }}
        
     steps:
        # Checkout the CALLING repo (not the shared repo)
@@ -175,11 +175,11 @@ jobs:
                 Write-Host "Solution settings file not found in $env. Generating..."
                 
                 pac solution create-settings --solution-zip "./exports/unmanaged/${{ inputs.solutionname }}.zip" --settings-file $settingsPath
-                echo "configexists=false" >> $GITHUB_OUTPUT
+                Write-Output "configexists=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
             }
             else {
                 Write-Host "Settings file already exists. Skipping generation."
-                echo "configexists=true" >> $GITHUB_OUTPUT
+                Write-Output "configexists=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
             }
           }
      
