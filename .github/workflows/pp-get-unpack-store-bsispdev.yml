@@ -174,9 +174,11 @@ jobs:
                 Write-Host "Solution settings file not found in $env. Generating..."
                 
                 pac solution create-settings --solution-zip "./exports/unmanaged/${{ inputs.solutionname }}.zip" --settings-file $settingsPath
+                echo "configexists=false" >> $GITHUB_OUTPUT
             }
             else {
                 Write-Host "Settings file already exists. Skipping generation."
+                echo "configexists=true" >> $GITHUB_OUTPUT
             }
           }
      
