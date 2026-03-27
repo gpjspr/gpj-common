@@ -77,7 +77,8 @@ jobs:
           }
           
           Write-Host "Using handlers: $handlers"
-          
+          $token = az account get-access-token --resource https://bsispdev.sharepoint.com --query accessToken -o tsv
+          Connect-PnPOnline -Url ${{ inputs.siteurl }} -AccessToken $token
           Get-PnPSiteTemplate -Out "./sharepointconfig/${{ inputs.solutionname }}.xml" -Handlers $handlers -Force
 
         # install xml tooling
