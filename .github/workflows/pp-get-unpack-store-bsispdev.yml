@@ -168,6 +168,7 @@ jobs:
         shell: pwsh
         run: |
           $environments = @("DEV","TEST","UAT","PROD")
+          $configfileexists = $true
           foreach ($env in $environments) {
             $settingsPath = "configuration/$env/${{ inputs.solutionname }}-settings.json"
             
@@ -175,13 +176,13 @@ jobs:
                 Write-Host "Solution settings file not found in $env. Generating..."
                 
                 pac solution create-settings --solution-zip "./exports/unmanaged/${{ inputs.solutionname }}.zip" --settings-file $settingsPath
-                Write-Output "configexists=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+                $configfileexists = $false
             }
             else {
                 Write-Host "Settings file already exists. Skipping generation."
-                Write-Output "configexists=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
             }
           }
+           Write-Output "configexists=$configfileexists" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
      
       #install xmllint
       - name: Install xmllint
