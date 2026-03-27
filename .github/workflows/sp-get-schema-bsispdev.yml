@@ -7,8 +7,9 @@ on:
   workflow_call:
     inputs:
       arguments:
-        description: 'Optional arguments to pass to the extract such as -Handlers Lists'
+        description: 'Optional arguments to pass to the extract such as -Handlers All (lists are default)'
         required: false
+        default: '-Handlers Lists'
         type: string
       solutionname:
         required: true
