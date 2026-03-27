@@ -84,7 +84,3 @@ jobs:
         id: push_repo
         if: success()
         run: git push origin HEAD
-
-  
-            echo "No missing dependencies found in solution.xml"
-          fi
