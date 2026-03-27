@@ -157,6 +157,26 @@ jobs:
           --folder "src/solutions/${{ inputs.solutionname }}" \
           --allowDelete true \
           --allowWrite
+     # Check if configuration file exists
+      - name: Ensure settings file exists
+        id: dev_settings_file
+        shell: pwsh
+        run: |
+          $environments = @("DEV","TEST","UAT","PROD")
+          foreach ($env in $environments) {
+            $settingsPath = "./configuration/$env/${{ inputs.solutionname }}.json"
+            
+            if (-Not (Test-Path $settingsPath)) {
+                Write-Host "Solution settings file not found in $env. Generating..."
+                
+                pac solution create-settings `
+                  --solution-zip "${{ inputs.solutionname }}.zip" `
+                  --settings-file $settingsPath
+            }
+            else {
+                Write-Host "Settings file already exists. Skipping generation."
+            }
+          }
      
       #install xmllint
       - name: Install xmllint
