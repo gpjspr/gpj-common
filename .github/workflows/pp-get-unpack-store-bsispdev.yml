@@ -173,9 +173,7 @@ jobs:
             if (-Not (Test-Path $settingsPath)) {
                 Write-Host "Solution settings file not found in $env. Generating..."
                 
-                pac solution create-settings ` 
-                  --solution-zip "./exports/unmanaged/${{ inputs.solutionname }}.zip" ` 
-                  --settings-file $settingsPath
+                pac solution create-settings --solution-zip "./exports/unmanaged/${{ inputs.solutionname }}.zip" --settings-file $settingsPath
             }
             else {
                 Write-Host "Settings file already exists. Skipping generation."
