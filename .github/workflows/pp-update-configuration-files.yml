@@ -51,6 +51,7 @@ jobs:
 
           $added = @()
           $removed = @()
+          $summaryFile = $env:GITHUB_STEP_SUMMARY
           
           foreach ($param in $new.EnvironmentVariables) {
               $match = $existing.EnvironmentVariables | Where-Object { $_.SchemaName -eq $param.SchemaName }
