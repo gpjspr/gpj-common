@@ -303,6 +303,14 @@ if ([string]::IsNullOrWhiteSpace($stepSummaryPath)) {
     # Append to GITHUB_STEP_SUMMARY
     $content = [string]::Join([Environment]::NewLine, $lines)
     $content | Out-File -FilePath $stepSummaryPath -Encoding utf8 -Append
+
+    $artifactPath = "common/canvas-lint-full.md"
+    $artifactDir = Split-Path $artifactPath -Parent
+    if (-not (Test-Path $artifactDir)) { New-Item -ItemType Directory -Path $artifactDir -Force }
+    
+    # Write the same content we built for step summary to the file
+    $content | Out-File -FilePath $artifactPath -Encoding utf8
+    Write-Host "Full lint output written to $artifactPath"
 }
 
 Write-Host ""
