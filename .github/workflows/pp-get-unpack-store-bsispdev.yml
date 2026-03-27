@@ -182,9 +182,12 @@ jobs:
                 Write-Host "Settings file already exists. Skipping generation."
             }
           }
-           Write-Host "configexists=$($configfileexists.ToString().ToLower())"
-           Write-Output "configexists=$($configfileexists.ToString().ToLower())" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-     
+           $configoutput=$configfileexists.ToString().ToLower()
+           Write-Output "configexists=$configoutput" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+      # check output
+      - name: Debug outputs
+        run: echo "Step output configexists=${{ steps.dev_settings_file.outputs.configexists }}"
+        
       #install xmllint
       - name: Install xmllint
         id: install_xmllint_extract
