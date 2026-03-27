@@ -12,8 +12,8 @@ on:
         type: string
 
 jobs:
-  export-solution:
-    name: Update Configuration
+  update-configuration:
+    name: Update
     runs-on: ubuntu-latest
 
        
