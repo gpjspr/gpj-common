@@ -49,6 +49,8 @@ jobs:
           $existing = Get-Content $existingFile -Raw | ConvertFrom-Json
           $new = Get-Content $tempFile -Raw | ConvertFrom-Json
 
+          $missing = @()
+          
           foreach ($param in $new.EnvironmentVariables) {
               $match = $existing.EnvironmentVariables | Where-Object { $_.SchemaName -eq $param.SchemaName }
               if (-Not $match) {
