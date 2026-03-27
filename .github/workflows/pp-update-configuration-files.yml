@@ -62,7 +62,7 @@ jobs:
             Write-Host "No new settings detected."
           }
           else {
-            Write-Host "Updating $existingFile with new settings found
+            Write-Host "Updating $existingFile with new settings found"
             $existing | ConvertTo-Json -Depth 10 | Set-Content $existingFile
             Write-Host "::warning::New settings were added to $existingFile - update TEST, UAT and PROD settings"
           }
