@@ -110,6 +110,33 @@ jobs:
       - name: Fail if requested
         if: ${{ inputs.fail-on-errors && steps.linter.outputs.exit_code != 0 }}
         run: exit 1
+
+        # clean up artifacts
+      - name: Delete all artifacts except canvas-lint-full
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const keepName = "canvas-lint-full";
+  
+            const artifacts = await github.rest.actions.listArtifactsForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100
+            });
+  
+            for (const artifact of artifacts.data.artifacts) {
+              if (artifact.name === keepName) {
+                console.log(`Keeping artifact: ${artifact.name}`);
+                continue;
+              }
+    
+                console.log(`Deleting artifact: ${artifact.name}`);
+                await github.rest.actions.deleteArtifact({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  artifact_id: artifact.id
+                });
+              }
   
 
           
