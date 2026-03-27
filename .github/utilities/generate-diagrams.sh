@@ -15,7 +15,7 @@ sanitize_filename() {
 
 get_flow_name() {
   local xml_file="$1"
-  xmlstarlet sel -t -v "//*[local-name()='DisplayName']" "$xml_file" 2>/dev/null || echo "Unnamed_Flow"
+  xmlstarlet sel -t -v "//*[local-name()='Name']" "$xml_file" 2>/dev/null || echo "Unnamed_Flow"
 }
 
 for json in "$INPUT_DIR"/*.json; do
@@ -24,7 +24,7 @@ for json in "$INPUT_DIR"/*.json; do
   xml="$INPUT_DIR/$base.json.data.xml"
 
   if [[ ! -f "$xml" ]]; then
-    echo "⚠️ No XML for $json, skipping"
+    echo "No XML for $json, skipping"
     continue
   fi
 
@@ -77,7 +77,7 @@ for json in "$INPUT_DIR"/*.json; do
         <mxCell id="1" parent="0"/>
 EOF
 
-  actions=$(jq -r '.definition.actions | keys[]' "$json")
+  actions=$(jq -r '.properties.definition.actions | keys[]' "$json")
 
   lane=0
 
