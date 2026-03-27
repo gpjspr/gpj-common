@@ -79,6 +79,7 @@ jobs:
                 Add-Content $summaryFile "| $($param.SchemaName) | $defaultVal |"
             }
             Add-Content $summaryFile "`n"
+            
             $existing | ConvertTo-Json -Depth 10 | Set-Content $existingFile
           }
           
@@ -92,6 +93,11 @@ jobs:
                   Add-Content $summaryFile "| $($param.SchemaName) | $defaultVal |"
               }
               Add-Content $summaryFile "`n"
+          }
+
+          if (($added.Count -gt 0) -or ($removed.Count -gt 0)) {
+            Add-Content $summaryFile "### 🟠 Manually update the configuration files with values"
+            Add-Content $summaryFile "`n"
           }
           
           
