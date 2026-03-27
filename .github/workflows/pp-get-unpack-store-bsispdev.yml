@@ -79,6 +79,10 @@ jobs:
             mkdir -p src/exports/unmanaged
             mkdir -p src/exports/managed
             mkdir -p src/solutions/${{ inputs.solutionname }}
+            mkdir -p configuration/DEV
+            mkdir -p configuration/TEST
+            mkdir -p configuration/UAT
+            mkdir -p configuration/PROD
 
       #change version number
       - name: Change Version Number of Solution in BUS-NOPS-DEV
@@ -164,13 +168,13 @@ jobs:
         run: |
           $environments = @("DEV","TEST","UAT","PROD")
           foreach ($env in $environments) {
-            $settingsPath = "/configuration/$env/${{ inputs.solutionname }}.json"
+            $settingsPath = "configuration/$env/${{ inputs.solutionname }}-settings.json"
             
             if (-Not (Test-Path $settingsPath)) {
                 Write-Host "Solution settings file not found in $env. Generating..."
                 
-                pac solution create-settings `
-                  --solution-zip "./exports/unmanaged/${{ inputs.solutionname }}.zip" `
+                pac solution create-settings ` 
+                  --solution-zip "./exports/unmanaged/${{ inputs.solutionname }}.zip" ` 
                   --settings-file $settingsPath
             }
             else {
