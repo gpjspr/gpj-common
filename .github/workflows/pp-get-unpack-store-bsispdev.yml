@@ -29,7 +29,8 @@ jobs:
   export-solution:
     name: Export Solution
     runs-on: ubuntu-latest
-
+    outputs:
+      configexits: ${{ steps.dev_settings_file.outputs.configexists }}
        
     steps:
        # Checkout the CALLING repo (not the shared repo)
