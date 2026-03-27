@@ -71,7 +71,7 @@ jobs:
           $token = az account get-access-token --resource https://bsispdev.sharepoint.com --query accessToken -o tsv
           Connect-PnPOnline -Url ${{ inputs.siteurl }} -AccessToken $token
           Write-Host $args
-          Get-PnPSiteTemplate Get-PnPSiteTemplate $args -Out ./sharepointconfig/${{ inputs.solutionname }}.xml -Force -Out ./sharepointconfig/${{ inputs.solutionname }}.xml -Force
+          Get-PnPSiteTemplate $args -Out ./sharepointconfig/${{ inputs.solutionname }}.xml -Force 
 
         # install xml tooling
       - name: Install xmlstarlet
@@ -112,6 +112,17 @@ jobs:
             -N pnp="http://schemas.dev.office.com/PnP/2022/09/ProvisioningSchema" \
             -d "//pnp:ListInstance[@Title='Style Library']" \
             "$FILE"
+
+          xmlstarlet ed -L \
+            -N pnp="http://schemas.dev.office.com/PnP/2022/09/ProvisioningSchema" \
+            -d "//pnp:ProvisioningTemplate/@BaseSiteTemplate" \
+            "$FILE"
+
+          xmlstarlet ed -L \
+            -N pnp="http://schemas.dev.office.com/PnP/2022/09/ProvisioningSchema" \
+            -d "//pnp:ProvisioningTemplate/@Scope" \
+            "$FILE"
+            
         # commit the changes
       - name: Commit changes
         id: commit_changes
