@@ -39,7 +39,11 @@ jobs:
           echo "Current branch: ${{ github.ref_name }}"
 
           if [[ "${{ github.ref_name }}" != *dev* ]]; then
-            echo "::error title=Invalid branch::Branch must contain 'dev' to run this workflow"
+            # echo "::error title=Invalid branch::Branch must contain 'dev' to run this workflow"
+            summaryFile="$GITHUB_STEP_SUMMARY"
+
+            echo "### 🔴 Action must be run from a DEV/* branch" >> "$summaryFile"
+            echo "" >> "$summaryFile"
             exit 1
           fi
     
