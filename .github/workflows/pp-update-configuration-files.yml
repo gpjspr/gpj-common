@@ -70,7 +70,6 @@ jobs:
           }
       
           if ($added.Count -gt 0) {
-            Write-Host "::warning::$($removed.Count) settings added - Manually update the configuration files with values"
             Add-Content $summaryFile "### 🟢 New Settings Detected"
             Add-Content $summaryFile "| SchemaName | DefaultValue |"
             Add-Content $summaryFile "|------------|-------------|"
@@ -84,7 +83,6 @@ jobs:
           }
           
           if ($removed.Count -gt 0) {
-            Write-Host "::error::$($removed.Count) settings removed - Manually update the configuration files"
               Add-Content $summaryFile "### 🔴 Removed Settings Detected"
               Add-Content $summaryFile "| SchemaName | DefaultValue |"
               Add-Content $summaryFile "|------------|-------------|"
