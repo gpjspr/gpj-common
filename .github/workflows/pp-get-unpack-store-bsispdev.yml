@@ -240,7 +240,7 @@ jobs:
         id: artifact_workflows
         uses: actions/upload-artifact@v4
         with:
-          name: appsource
+          name: flowsource
           path: src/solutions/${{ inputs.solutionname }}/Workflows
 
       # Unpack the canvas app to source
@@ -312,7 +312,7 @@ jobs:
         id: artifact_appsource
         uses: actions/upload-artifact@v4
         with:
-          name: download-appsource
+          name: appsource
           path: src/appsource
 
       # commit the changes
