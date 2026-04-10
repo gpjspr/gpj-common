@@ -43,7 +43,7 @@ jobs:
       - name: Build Solution
         id: build_managed
         run: |
-          pac solution pack --zipfile "./deploy/managed/${{ inputs.solutionname }}.zip" \
+          pac solution pack --zipfile "./out/${{ inputs.solutionname }}.zip" \
           --folder "./src/solutions/${{ inputs.solutionname }}" \
           --packagetype managed
           
