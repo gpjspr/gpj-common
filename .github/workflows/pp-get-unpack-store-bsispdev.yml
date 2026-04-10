@@ -18,6 +18,10 @@ on:
         description: 'The minor version (the second solution number). If left blank, the current minor version will be used.'
         required: false
         type: string
+      pp_env_url:
+        description:  'Power Platfrom environment URL'
+        required: true
+        type: string
      
 env:
   BUILD_VERSION: 1.0.0.0
@@ -84,7 +88,7 @@ jobs:
             --githubFederated \
             --tenant ${{ env.AZ_TENANT_ID }} \
             --applicationId ${{ env.AZ_CLIENT_ID }} \
-            --environment ${{ env.PP_ENV_URL }}
+            --environment ${{ inputs.pp_env_url }}
           pac auth who
 
       # check solution folder
@@ -147,7 +151,7 @@ jobs:
 
           # Set version
           pac solution online-version \
-          --environment ${{ env.PP_ENV_URL }} \
+          --environment ${{ inputs.pp_env_url }} \
           --solution-name "${{ inputs.solutionname }}" \
           --solution-version "$NEW_VERSION"
      
