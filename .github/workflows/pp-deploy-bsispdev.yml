@@ -157,5 +157,5 @@ jobs:
         shell: bash
         run: |
           pac solution import \
-            --path ./artifact/${{ inputs.solutionname }} \
+            --path ./artifact/${{ inputs.solutionname }}.zip \
             --environment ${{ inputs.pp_env_url }}
