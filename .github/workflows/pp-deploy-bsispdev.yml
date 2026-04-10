@@ -81,7 +81,7 @@ jobs:
           elif [[ $BRANCH == releases/* ]]; then
             ENV_NAME="PROD"
           else
-            echo "echo "### 🟠 Invalid branch. Must be test/*, uat/* or releases/*" >> $GITHUB_OUTPUT
+            echo "echo "### 🟠 Invalid branch. Must be test/*, uat/* or releases/* " >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
 
@@ -95,7 +95,7 @@ jobs:
           DEPLOY_SETTINGS="configuration/$ENV_NAME/deploymentSettings.json"
 
           if [ ! -f "$CONFIG_PATH" ]; then
-            echo "### 🟠 Configuration file not found" >> $GITHUB_OUTPUT
+            echo "### 🟠 Configuration file not found" >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
 
@@ -104,7 +104,7 @@ jobs:
           echo "environment_url=$ENV_URL" >> $GITHUB_OUTPUT
           echo "deployment_settings=$DEPLOY_SETTINGS" >> $GITHUB_OUTPUT
           
-          echo "### ✅ Using configuration $DEPLOY_SETTINGS" >> $GITHUB_OUTPUT
+          echo "### ✅ Using configuration $DEPLOY_SETTINGS" >> $GITHUB_STEP_SUMMARY
 
       - name: Download solution artifact
         id: download-solution
