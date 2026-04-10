@@ -47,14 +47,17 @@ jobs:
           --folder "./src/solutions/${{ inputs.solutionname }}" \
           --packagetype managed
           
-      #publish solution artifact    
       - name: Upload solution as artifact
-        id: solution
         uses: actions/upload-artifact@v4
         with:
-          name: deploy-solution
-          path: "./deploy/managed/${{ inputs.solutionname }}.zip"
+          name: ${{ inputs.solutionname }}-solution
+          path: ./out/${{ inputs.solutionname }}.zip
           
+      - name: Add summary
+      run: |
+        echo "### ✅ Solution packaged" >> $GITHUB_STEP_SUMMARY
+        echo "- File: UkCustomsApp.zip" >> $GITHUB_STEP_SUMMARY
+        
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
@@ -67,11 +70,11 @@ jobs:
           BRANCH="${GITHUB_REF_NAME}"
 
           if [[ $BRANCH == test/* ]]; then
-            ENV_NAME="test"
+            ENV_NAME="TEST"
           elif [[ $BRANCH == uat/* ]]; then
-            ENV_NAME="uat"
+            ENV_NAME="UAT"
           elif [[ $BRANCH == releases/* ]]; then
-            ENV_NAME="prod"
+            ENV_NAME="PROD"
           else
             echo "Unsupported branch naming. Must be test/*, uat/* or releases/*"
             exit 1
@@ -83,7 +86,7 @@ jobs:
         id: config
         run: |
           ENV_NAME=${{ steps.env.outputs.env_name }}
-          CONFIG_PATH="configuration/$ENV_NAME/settings.json"
+          CONFIG_PATH="configuration/$ENV_NAME/{{ inputs.solutionname }}-settings.json"
           DEPLOY_SETTINGS="configuration/$ENV_NAME/deploymentSettings.json"
 
           if [ ! -f "$CONFIG_PATH" ]; then
@@ -95,4 +98,3 @@ jobs:
 
           echo "environment_url=$ENV_URL" >> $GITHUB_OUTPUT
           echo "deployment_settings=$DEPLOY_SETTINGS" >> $GITHUB_OUTPUT
-          
