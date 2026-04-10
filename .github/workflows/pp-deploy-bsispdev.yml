@@ -86,7 +86,7 @@ jobs:
         id: config
         run: |
           ENV_NAME=${{ steps.env.outputs.env_name }}
-          CONFIG_PATH="configuration/$ENV_NAME/{{ inputs.solutionname }}-settings.json"
+          CONFIG_PATH="configuration/$ENV_NAME/${{ inputs.solutionname }}-settings.json"
           DEPLOY_SETTINGS="configuration/$ENV_NAME/deploymentSettings.json"
 
           if [ ! -f "$CONFIG_PATH" ]; then
@@ -98,3 +98,14 @@ jobs:
 
           echo "environment_url=$ENV_URL" >> $GITHUB_OUTPUT
           echo "deployment_settings=$DEPLOY_SETTINGS" >> $GITHUB_OUTPUT
+
+      - name: Download solution artifact
+        id: download-solution
+        continue-on-error: false
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.solutionname }}-solution
+          path: ./artifact/
+
+      - name: Verify download
+        run: ls -l ./artifact
