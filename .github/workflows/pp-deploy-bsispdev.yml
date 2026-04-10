@@ -96,17 +96,16 @@ jobs:
         run: |
           ENV_NAME=${{ steps.env.outputs.env_name }}
           CONFIG_PATH="configuration/$ENV_NAME/${{ inputs.solutionname }}-settings.json"
-          DEPLOY_SETTINGS="configuration/$ENV_NAME/deploymentSettings.json"
 
           if [ ! -f "$CONFIG_PATH" ]; then
             echo "### 🟠 Configuration file not found" >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
 
-          echo "deployment_settings=$DEPLOY_SETTINGS" >> $GITHUB_OUTPUT
+          echo "deployment_settings=$CONFIG_PATH" >> $GITHUB_OUTPUT
           
-          echo "### ✅ Deploying ${{ inputs.solutionname }} to ${{ inputs.pp_env_url }} " >> $GITHUB_STEP_SUMMARY
-          echo "### ✅ Using configuration file $DEPLOY_SETTINGS" >> $GITHUB_STEP_SUMMARY
+          echo "### Deploying ${{ inputs.solutionname }} to ${{ inputs.pp_env_url }} " >> $GITHUB_STEP_SUMMARY
+          echo "### Using configuration file CONFIG_PATH" >> $GITHUB_STEP_SUMMARY
 
       - name: Download solution artifact
         id: download-solution
@@ -116,5 +115,46 @@ jobs:
           name: ${{ inputs.solutionname }}-solution
           path: ./artifact/
 
-      - name: Verify download
-        run: ls -l ./artifact
+      # Azure login (OIDC)
+      - name: Az CLI login
+        id: az_authentiate
+        uses: azure/login@v2
+        with:
+            # these need to be EDF items. Do not need to store as variables, are constant. Are not secrets
+          client-id: ${{ env.AZ_CLIENT_ID }}
+          tenant-id: ${{ env.AZ_TENANT_ID }}
+          allow-no-subscriptions: true
+     
+      # Install PAC CLI
+      - name: Install PAC CLI
+        id: install_pac
+        uses: microsoft/powerplatform-actions/actions-install@v1
+
+      # Ensure PAC is available
+      - name: Add PAC to PATH
+        id: pac_path
+        shell: bash
+        run: |
+          echo "$(dirname "${POWERPLATFORMTOOLS_PACPATH}")" >> "$GITHUB_PATH"
+       
+      #Authenticate to Power Platform
+      - name: PAC federated
+        id: pac_authenticate
+        shell: bash
+        run: |
+          pac auth create \
+            --name "pacfed" \
+            --githubFederated \
+            --tenant ${{ env.AZ_TENANT_ID }} \
+            --applicationId ${{ env.AZ_CLIENT_ID }} \
+            --environment ${{ inputs.pp_env_url }}
+          pac auth who
+
+      # Import solution
+      - name: PAC import
+        id: pac_import
+        shell: bash
+        run: |
+          pac solution import \
+            --path ./artifact/${{ inputs.solutionname }} \
+            --environment ${{ inputs.pp_env_url }}
