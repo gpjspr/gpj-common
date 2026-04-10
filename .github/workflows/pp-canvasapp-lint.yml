@@ -44,7 +44,7 @@ jobs:
       
         # Optional download if run as subsequent job: ignore failure if the artifact doesn't exist
       - name: Try to download appsource artifact
-        id: download_appsource
+        id: download-appsource
         continue-on-error: true
         uses: actions/download-artifact@v4
         with:
