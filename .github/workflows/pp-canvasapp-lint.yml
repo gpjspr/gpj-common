@@ -4,6 +4,7 @@ name: Canvas App Lint
 permissions:
   id-token: write
   contents: read
+  actions: write
 
 on:
   workflow_call:
