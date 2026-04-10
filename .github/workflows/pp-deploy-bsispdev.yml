@@ -81,7 +81,7 @@ jobs:
           elif [[ $BRANCH == releases/* ]]; then
             ENV_NAME="PROD"
           else
-            echo "echo "### 🟠 Invalid branch. Must be test/*, uat/* or releases/* " >> $GITHUB_STEP_SUMMARY
+            echo "### 🟠 Invalid branch. Must be test/*, uat/* or releases/* " >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
 
