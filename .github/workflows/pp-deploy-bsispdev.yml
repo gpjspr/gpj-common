@@ -103,9 +103,6 @@ jobs:
             exit 1
           fi
 
-          ENV_URL=$(jq -r '.environmentUrl' $CONFIG_PATH)
-
-          echo "environment_url=$ENV_URL" >> $GITHUB_OUTPUT
           echo "deployment_settings=$DEPLOY_SETTINGS" >> $GITHUB_OUTPUT
           
           echo "### ✅ Deploying ${{ inputs.solutionname }} to ${{ inputs.pp_env_url }} " >> $GITHUB_STEP_SUMMARY
