@@ -1,0 +1,98 @@
+---
+name: Deploy solution
+permissions:
+  contents: write
+
+on:
+  workflow_call:
+    inputs:
+      solutionname:
+        required: true
+        type: string
+
+env:
+  BUILD_VERSION: 1.0.0.0
+  AZ_TENANT_ID: d3e62a06-7979-468d-a1a1-110e7c24c8d1
+  AZ_CLIENT_ID: 3df7eaa5-11a5-4e72-9c44-04715669df8b
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # Checkout the CALLING repo (not the shared repo)
+      - name: Checkout repo
+        id: check_repo_extract
+        uses: actions/checkout@v4
+
+      # Install PAC CLI
+      - name: Install PAC CLI
+        id: install_pac
+        uses: microsoft/powerplatform-actions/actions-install@v1
+
+      # Ensure PAC is available
+      - name: Add PAC to PATH
+        id: pac_path
+        shell: bash
+        run: |
+          echo "$(dirname "${POWERPLATFORMTOOLS_PACPATH}")" >> "$GITHUB_PATH"
+
+      # build solution
+      - name: Build Solution
+        id: build_managed
+        run: |
+          pac solution pack --zipfile"./deploy/managed/${{ inputs.solutionname }}.zip" \
+          --folder "./src/solutions/${{ inputs.solutionname }}" \
+          --package-type managed
+          
+      #publish solution artifact    
+      - name: Upload solution as artifact
+        id: solution
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-solution
+          path: "./deploy/managed/${{ inputs.solutionname }}.zip"
+          
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      # get branch and config
+      - name: Determine Environment from Branch
+        id: env
+        run: |
+          BRANCH="${GITHUB_REF_NAME}"
+
+          if [[ $BRANCH == test/* ]]; then
+            ENV_NAME="test"
+          elif [[ $BRANCH == uat/* ]]; then
+            ENV_NAME="uat"
+          elif [[ $BRANCH == releases/* ]]; then
+            ENV_NAME="prod"
+          else
+            echo "Unsupported branch naming. Must be test/*, uat/* or releases/*"
+            exit 1
+          fi
+
+          echo "env_name=$ENV_NAME" >> $GITHUB_OUTPUT
+
+      - name: Load Environment Config
+        id: config
+        run: |
+          ENV_NAME=${{ steps.env.outputs.env_name }}
+          CONFIG_PATH="configuration/$ENV_NAME/settings.json"
+          DEPLOY_SETTINGS="configuration/$ENV_NAME/deploymentSettings.json"
+
+          if [ ! -f "$CONFIG_PATH" ]; then
+            echo "Missing config file: $CONFIG_PATH"
+            exit 1
+          fi
+
+          ENV_URL=$(jq -r '.environmentUrl' $CONFIG_PATH)
+
+          echo "environment_url=$ENV_URL" >> $GITHUB_OUTPUT
+          echo "deployment_settings=$DEPLOY_SETTINGS" >> $GITHUB_OUTPUT
+          
