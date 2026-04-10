@@ -81,7 +81,7 @@ jobs:
           elif [[ $BRANCH == releases/* ]]; then
             ENV_NAME="PROD"
           else
-            echo "Unsupported branch naming. Must be test/*, uat/* or releases/*"
+            echo "echo "### 🟠 Invalid branch. Must be test/*, uat/* or releases/*" >> $GITHUB_OUTPUT
             exit 1
           fi
 
@@ -95,7 +95,7 @@ jobs:
           DEPLOY_SETTINGS="configuration/$ENV_NAME/deploymentSettings.json"
 
           if [ ! -f "$CONFIG_PATH" ]; then
-            echo "Missing config file: $CONFIG_PATH"
+            echo "### 🟠 Configuration file not found" >> $GITHUB_OUTPUT
             exit 1
           fi
 
@@ -103,6 +103,8 @@ jobs:
 
           echo "environment_url=$ENV_URL" >> $GITHUB_OUTPUT
           echo "deployment_settings=$DEPLOY_SETTINGS" >> $GITHUB_OUTPUT
+          
+          echo "### ✅ Using configuration $DEPLOY_SETTINGS" >> $GITHUB_OUTPUT
 
       - name: Download solution artifact
         id: download-solution
