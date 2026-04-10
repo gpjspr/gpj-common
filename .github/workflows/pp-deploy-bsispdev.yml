@@ -150,12 +150,60 @@ jobs:
             --applicationId ${{ env.AZ_CLIENT_ID }} \
             --environment ${{ inputs.pp_env_url }}
           pac auth who
-
+        
       # Import solution
       - name: PAC import
+        continue-on-error: true
         id: pac_import
         shell: bash
         run: |
           pac solution import \
             --path ./artifact/${{ inputs.solutionname }}.zip \
-            --environment ${{ inputs.pp_env_url }}
+            --environment ${{ inputs.pp_env_url }} \
+            2>&1 | tee import.log
+            
+      #any dependencies      
+      - name: Extract Missing Dependencies
+        if: always()
+        run: |
+          sed -n '/<MissingDependencies/,/<\/MissingDependencies>/p' import.log > missing.xml || true
+      
+          if [ ! -s missing.xml ]; then
+            echo "### ✅ No missing dependencies found" >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+          
+      #install xmllint
+      - name: Install xmllint
+        id: install_xmllint_extract
+        run: sudo apt-get update && sudo apt-get install -y libxml2-utils
+
+      # normalise xml
+      - name: Normalize XML
+        run: |
+          echo "<root>" > fixed.xml
+          cat missing.xml >> fixed.xml
+          echo "</root>" >> fixed.xml
+
+      # capture errors
+      - name: Parse Missing Dependencies
+        run: |
+          echo "### ❌ Missing Dependencies" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Type | Required | Used By |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|----------|---------|" >> $GITHUB_STEP_SUMMARY
+      
+          COUNT=$(xmllint --xpath "count(//MissingDependency)" fixed.xml)
+      
+          if [ "$COUNT" = "0" ]; then
+            echo "No missing dependencies" >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+      
+          for i in $(seq 1 $COUNT); do
+            TYPE=$(xmllint --xpath "string((//MissingDependency)[$i]/Required/@type)" fixed.xml)
+            REQUIRED=$(xmllint --xpath "string((//MissingDependency)[$i]/Required/@displayName)" fixed.xml)
+            DEPENDENT=$(xmllint --xpath "string((//MissingDependency)[$i]/Dependent/@displayName)" fixed.xml)
+      
+            echo "| $TYPE | $REQUIRED | $DEPENDENT |" >> $GITHUB_STEP_SUMMARY
+          done
