@@ -45,7 +45,7 @@ jobs:
         run: |
           pac solution pack --zipfile "./deploy/managed/${{ inputs.solutionname }}.zip" \
           --folder "./src/solutions/${{ inputs.solutionname }}" \
-          --package-type managed
+          --packagetype managed
           
       #publish solution artifact    
       - name: Upload solution as artifact
