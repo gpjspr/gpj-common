@@ -54,9 +54,9 @@ jobs:
           path: ./out/${{ inputs.solutionname }}.zip
           
       - name: Add summary
-      run: |
-        echo "### ✅ Solution packaged" >> $GITHUB_STEP_SUMMARY
-        echo "- File: UkCustomsApp.zip" >> $GITHUB_STEP_SUMMARY
+        run: |
+          echo "### ✅ Solution packaged" >> $GITHUB_STEP_SUMMARY
+          echo "- File: UkCustomsApp.zip" >> $GITHUB_STEP_SUMMARY
         
   deploy:
     name: Deploy
