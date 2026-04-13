@@ -3,6 +3,7 @@ name: Update SharePoint Schema
 permissions:
   contents: write
   id-token: write
+  actions: write
 on:
   workflow_call:
     inputs:
@@ -68,6 +69,7 @@ jobs:
           Start-PnPTraceLog -Level Debug -Path "pnp-log.txt"
           Invoke-PnPSiteTemplate -Path "sharepointconfig/${{ inputs.solutionname }}.xml"
           Stop-PnPTraceLog
+          Get-Content pnp-log.txt | Out-String >> $env:GITHUB_STEP_SUMMARY
 
       - name: Upload PnP log
         id: upload_tracelog
