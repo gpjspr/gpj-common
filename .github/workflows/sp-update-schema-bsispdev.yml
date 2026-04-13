@@ -65,6 +65,6 @@ jobs:
 
           $token = az account get-access-token --resource https://bsispdev.sharepoint.com --query accessToken -o tsv
           Connect-PnPOnline -Url ${{ inputs.siteurl }} -AccessToken $token
-          Invoke-PnPSiteTemplate -Path "sharepointconfig/${{ inputs.solutionname }}.xml"
+          Invoke-PnPSiteTemplate -Path "sharepointconfig/${{ inputs.solutionname }}.xml" -Verbose
 
       
