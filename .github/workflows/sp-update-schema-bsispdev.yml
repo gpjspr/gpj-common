@@ -51,7 +51,12 @@ jobs:
           client-id: ${{ env.AZ_CLIENT_ID }}
           tenant-id: ${{ env.AZ_TENANT_ID }}
           allow-no-subscriptions: true
-        
+      - name: Debug files
+        run: |
+          echo "Branch: ${{ github.ref }}"
+          pwd
+          ls -R  
+          
         #connect pnp and apply schema 
       - name: Appy SharePoint PnP site template
         id: import_sitetemplate
