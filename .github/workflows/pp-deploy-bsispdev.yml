@@ -108,7 +108,7 @@ jobs:
           echo "deployment_settings=$CONFIG_PATH" >> $GITHUB_OUTPUT
           
           echo "### Deploying ${{ inputs.solutionname }} to ${{ inputs.pp_env_url }} " >> $GITHUB_STEP_SUMMARY
-          echo "### Using configuration file CONFIG_PATH" >> $GITHUB_STEP_SUMMARY
+          echo "### Using configuration file $CONFIG_PATH" >> $GITHUB_STEP_SUMMARY
 
       - name: Download solution artifact
         id: download-solution
@@ -190,19 +190,18 @@ jobs:
       # capture errors
       - name: Parse Missing Dependencies
         run: |
-          echo "### ❌ Missing Dependencies" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Type | Required | Used By |" >> $GITHUB_STEP_SUMMARY
-          echo "|------|----------|---------|" >> $GITHUB_STEP_SUMMARY
+          MISSING_COUNT=$(xmllint --xpath 'count(//MissingDependencies/MissingDependency)' "$SOLUTION_XML" 2>/dev/null)
+          if [[ "$MISSING_COUNT" -gt 0 ]]; then
+            echo "❌ Deployment failed due to missing dependencies" >> $GITHUB_STEP_SUMMARY
+            echo "::warning::Found $MISSING_COUNT missing dependencies in solution.xml"
       
-          COUNT=$(xmllint --xpath "count(//MissingDependency)" fixed.xml)
+            # Create a concise table: Dependent | Required
+            echo "###  Missing Dependencies in ${{ inputs.solutionname }}" >> $GITHUB_STEP_SUMMARY
+            echo "| Dependent | Required | Type |" >> $GITHUB_STEP_SUMMARY
+            echo "|-----------|---------|---------|" >> $GITHUB_STEP_SUMMARY
       
-          if [ "$COUNT" = "0" ]; then
-            echo "No missing dependencies" >> $GITHUB_STEP_SUMMARY
-            exit 0
-          fi
-      
-          for i in $(seq 1 "$MISSING_COUNT"); do
+            # Loop through each MissingDependency
+            for i in $(seq 1 "$MISSING_COUNT"); do
               DEP=$(xmllint --xpath "string(//MissingDependencies/MissingDependency[$i]/Dependent/@displayName)" "$SOLUTION_XML" 2>/dev/null)
               REQ=$(xmllint --xpath "string(//MissingDependencies/MissingDependency[$i]/Required/@displayName)" "$SOLUTION_XML" 2>/dev/null)
               TYPE=$(xmllint --xpath "string(//MissingDependencies/MissingDependency[$i]/Required/@type)" "$SOLUTION_XML" 2>/dev/null)
@@ -210,7 +209,11 @@ jobs:
               REQ_CLEAN=$(echo "$REQ" | tr '|' ':')
               echo "| $DEP_CLEAN | $REQ_CLEAN | $TYPE |" >> $GITHUB_STEP_SUMMARY
               echo "  Dependent: $DEP, Required: $REQ, Type: $TYPE"
-            done
-          echo ""
-          echo "❌ Deployment failed due to missing dependencies" >> $GITHUB_STEP_SUMMARY
-          exit 1
+            done  
+            exit 1
+          else
+            echo "No missing dependencies" >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+          
+          
