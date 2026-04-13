@@ -484,15 +484,16 @@ jobs:
       
             # Create a concise table: Dependent | Required
             echo "###  Missing Dependencies in ${{ inputs.solutionname }}" >> $GITHUB_STEP_SUMMARY
-            echo "| Dependent | Required |" >> $GITHUB_STEP_SUMMARY
-            echo "|-----------|---------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Dependent | Required | Type |" >> $GITHUB_STEP_SUMMARY
+            echo "|-----------|---------|---------|" >> $GITHUB_STEP_SUMMARY
       
             # Loop through each MissingDependency
             for i in $(seq 1 "$MISSING_COUNT"); do
               DEP=$(xmllint --xpath "string(//MissingDependencies/MissingDependency[$i]/Dependent/@displayName)" "$SOLUTION_XML" 2>/dev/null)
               REQ=$(xmllint --xpath "string(//MissingDependencies/MissingDependency[$i]/Required/@displayName)" "$SOLUTION_XML" 2>/dev/null)
-              echo "| $DEP | $REQ |" >> $GITHUB_STEP_SUMMARY
-              echo "  Dependent: $DEP, Required: $REQ"
+              TYPE=$(xmllint --xpath "string(//MissingDependencies/MissingDependency[$i]/Required/@type)" "$SOLUTION_XML" 2>/dev/null)
+              echo "| $DEP | $REQ | $TYPE |" >> $GITHUB_STEP_SUMMARY
+              echo "  Dependent: $DEP, Required: $REQ, Type: $TYPE"
             done
       
           else
