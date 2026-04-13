@@ -71,6 +71,7 @@ jobs:
 
       - name: Upload PnP log
         id: upload_tracelog
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: pnp-log
