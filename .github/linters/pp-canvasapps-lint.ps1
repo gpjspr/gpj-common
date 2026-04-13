@@ -238,7 +238,7 @@ if ([string]::IsNullOrWhiteSpace($stepSummaryPath)) {
 } else {
     $lines = New-Object System.Collections.Generic.List[string]
 
-    $lines.Add("# Canvas YAML Naming Check Summary")
+    $lines.Add("### Canvas YAML Naming Check Summary")
     $lines.Add("")
     $lines.Add(("**Files scanned:** {0} &nbsp;&nbsp; **Failures:** {1} &nbsp;&nbsp; **Warnings:** {2}" -f $fileList.Count, $failCount, $warnCount))
     $lines.Add("")
