@@ -115,7 +115,7 @@ jobs:
 
           xmlstarlet ed -L \
             -N pnp="http://schemas.dev.office.com/PnP/2022/09/ProvisioningSchema" \
-            -d "//pnp:ListInstance[@Title='Site Assets]" \
+            -d "//pnp:ListInstance[@Title='Site Assets]'" \
             "$FILE"
 
           xmlstarlet ed -L \
