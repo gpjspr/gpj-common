@@ -132,6 +132,12 @@ jobs:
             -N pnp="http://schemas.dev.office.com/PnP/2022/09/ProvisioningSchema" \
             -d "//pnp:ProvisioningTemplate/@Scope" \
             "$FILE"
+
+          # delete all instances of created field, as should exist and seems to throw error
+           xmlstarlet ed -L \
+            -N pnp="http://schemas.dev.office.com/PnP/2022/09/ProvisioningSchema" \
+            -d "//pnp:FieldRef[@ID='998b5cff-4a35-47a7-92f3-3914aa6aa4a2']" \
+            "$FILE"
             
         # commit the changes
       - name: Commit changes
