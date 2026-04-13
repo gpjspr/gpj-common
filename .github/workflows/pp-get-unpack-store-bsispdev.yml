@@ -492,7 +492,9 @@ jobs:
               DEP=$(xmllint --xpath "string(//MissingDependencies/MissingDependency[$i]/Dependent/@displayName)" "$SOLUTION_XML" 2>/dev/null)
               REQ=$(xmllint --xpath "string(//MissingDependencies/MissingDependency[$i]/Required/@displayName)" "$SOLUTION_XML" 2>/dev/null)
               TYPE=$(xmllint --xpath "string(//MissingDependencies/MissingDependency[$i]/Required/@type)" "$SOLUTION_XML" 2>/dev/null)
-              echo "| $DEP | $REQ | $TYPE |" >> $GITHUB_STEP_SUMMARY
+              DEP_CLEAN=$(echo "$DEP" | tr '|' ':')
+              REQ_CLEAN=$(echo "$REQ" | tr '|' ':')
+              echo "| $DEP_CLEAN | $REQ_CLEAN | $TYPE |" >> $GITHUB_STEP_SUMMARY
               echo "  Dependent: $DEP, Required: $REQ, Type: $TYPE"
             done
       
