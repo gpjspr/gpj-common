@@ -209,3 +209,6 @@ jobs:
       
             echo "| $TYPE | $REQUIRED | $DEPENDENT |" >> $GITHUB_STEP_SUMMARY
           done
+          echo ""
+          echo "❌ Deployment failed due to missing dependencies" >> $GITHUB_STEP_SUMMARY
+          exit 1
