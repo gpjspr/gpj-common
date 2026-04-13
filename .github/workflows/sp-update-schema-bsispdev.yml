@@ -25,23 +25,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # get branch and config
-      - name: Determine Environment from Branch
-        id: env
-        run: |
-          BRANCH="${GITHUB_REF_NAME}"
-
-          if [[ $BRANCH == test/* ]]; then
-            ENV_NAME="TEST"
-          elif [[ $BRANCH == uat/* ]]; then
-            ENV_NAME="UAT"
-          elif [[ $BRANCH == releases/* ]]; then
-            ENV_NAME="PROD"
-          else
-            echo "### 🟠 Invalid branch. Must be test/*, uat/* or releases/* " >> $GITHUB_STEP_SUMMARY
-            exit 1
-          fi
-          
+           
         # Install PnP
       - name: Install PowerShell and PnP PowerShell
         id: install_pnp
