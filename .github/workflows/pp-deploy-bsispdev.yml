@@ -31,6 +31,8 @@ jobs:
       - name: Checkout repo
         id: check_repo_extract
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
 
       # Install PAC CLI
       - name: Install PAC CLI
