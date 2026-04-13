@@ -202,13 +202,15 @@ jobs:
             exit 0
           fi
       
-          for i in $(seq 1 $COUNT); do
-            TYPE=$(xmllint --xpath "string((//MissingDependency)[$i]/Required/@type)" fixed.xml)
-            REQUIRED=$(xmllint --xpath "string((//MissingDependency)[$i]/Required/@displayName)" fixed.xml)
-            DEPENDENT=$(xmllint --xpath "string((//MissingDependency)[$i]/Dependent/@displayName)" fixed.xml)
-      
-            echo "| $TYPE | $REQUIRED | $DEPENDENT |" >> $GITHUB_STEP_SUMMARY
-          done
+          for i in $(seq 1 "$MISSING_COUNT"); do
+              DEP=$(xmllint --xpath "string(//MissingDependencies/MissingDependency[$i]/Dependent/@displayName)" "$SOLUTION_XML" 2>/dev/null)
+              REQ=$(xmllint --xpath "string(//MissingDependencies/MissingDependency[$i]/Required/@displayName)" "$SOLUTION_XML" 2>/dev/null)
+              TYPE=$(xmllint --xpath "string(//MissingDependencies/MissingDependency[$i]/Required/@type)" "$SOLUTION_XML" 2>/dev/null)
+              DEP_CLEAN=$(echo "$DEP" | tr '|' ':')
+              REQ_CLEAN=$(echo "$REQ" | tr '|' ':')
+              echo "| $DEP_CLEAN | $REQ_CLEAN | $TYPE |" >> $GITHUB_STEP_SUMMARY
+              echo "  Dependent: $DEP, Required: $REQ, Type: $TYPE"
+            done
           echo ""
           echo "❌ Deployment failed due to missing dependencies" >> $GITHUB_STEP_SUMMARY
           exit 1
