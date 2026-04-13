@@ -65,16 +65,10 @@ jobs:
           client-id: ${{ env.AZ_CLIENT_ID }}
           tenant-id: ${{ env.AZ_TENANT_ID }}
           allow-no-subscriptions: true
-
-        # check sharepointconfig folder
-      - name: Check Solution folder
-        id: check_folders
-        run: |
-            mkdir -p sharepointconfig
         
         #connect pnp and apply schema 
       - name: Appy SharePoint PnP site template
-        id: export_sitetemplate
+        id: import_sitetemplate
         shell: pwsh
         run: |
 
