@@ -65,9 +65,9 @@ jobs:
 
           $token = az account get-access-token --resource https://bsispdev.sharepoint.com --query accessToken -o tsv
           Connect-PnPOnline -Url ${{ inputs.siteurl }} -AccessToken $token
-          Set-PnPTraceLog -On -Level Debug -LogFile "pnp-log.txt"
+          Start-PnPTraceLog -Level Debug -Path "pnp-log.txt"
           Invoke-PnPSiteTemplate -Path "sharepointconfig/${{ inputs.solutionname }}.xml"
-          Set-PnPTraceLog -Off
+          Stop-PnPTraceLog
 
       - name: Upload PnP log
         id: upload_tracelog
