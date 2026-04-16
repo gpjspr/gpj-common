@@ -185,27 +185,6 @@ jobs:
           # -------------------------------
           if grep -q "<MissingDependencies" $LOG; then
             echo "### ❌ Deployment blocked: missing dependencies detected" >> $GITHUB_STEP_SUMMARY
-      
-            sed -n '/<MissingDependencies/,/<\/MissingDependencies>/p' $LOG > missing.xml || true
-      
-            echo "<root>" > fixed.xml
-            cat missing.xml >> fixed.xml
-            echo "</root>" >> fixed.xml
-      
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "| Type | Required | Used By |" >> $GITHUB_STEP_SUMMARY
-            echo "|------|----------|---------|" >> $GITHUB_STEP_SUMMARY
-      
-            COUNT=$(xmllint --xpath "count(//MissingDependency)" fixed.xml 2>/dev/null || echo 0)
-      
-            for i in $(seq 1 $COUNT); do
-              TYPE=$(xmllint --xpath "string((//MissingDependency)[$i]/Required/@type)" fixed.xml)
-              REQUIRED=$(xmllint --xpath "string((//MissingDependency)[$i]/Required/@displayName)" fixed.xml)
-              DEPENDENT=$(xmllint --xpath "string((//MissingDependency)[$i]/Dependent/@displayName)" fixed.xml)
-      
-              echo "| $TYPE | $REQUIRED | $DEPENDENT |" >> $GITHUB_STEP_SUMMARY
-            done
-      
             HAS_ERROR=1
           fi
       
