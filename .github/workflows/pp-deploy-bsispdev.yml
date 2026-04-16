@@ -166,7 +166,7 @@ jobs:
             --publish-changes false \
             --async false \
             2>&1 | tee import.log
-      
+          echo "### 🔍 Dry-run completed. Checking result..." >> $GITHUB_STEP_SUMMARY
           echo "exit_code=$?" >> $GITHUB_OUTPUT
             
       
@@ -265,14 +265,14 @@ jobs:
       # fail if not valid
       - name: Fail if validation failed
         id: fail_notvalid
-        if: steps.validate_import.outputs.exit_code != '0'
+        if: steps.validate_import.outputs.exit_code != '0' || steps.analyse.outputs.has_error == '1'
         run: 
           echo "### ❌ Deployment blocked" >> $GITHUB_STEP_SUMMARY
           exit 1
 
       # actual import
       - name: Import Solution (Actual Deployment)
-        if: steps.analyse.outputs.has_error == '0'
+        if: steps.analyse.outputs.has_error == '0' && steps.validate_import.outputs.exit_code == '0'
         id: import_real
         run: |
           set -o pipefail
