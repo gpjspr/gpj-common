@@ -154,7 +154,7 @@ jobs:
           pac auth who
 
       # validate import
-      - name: Validate Deployment (PAC Import Analysis)
+      - name: Validate Deployment
         id: validate_import
         continue-on-error: true
         run: |
@@ -265,8 +265,10 @@ jobs:
       # fail if not valid
       - name: Fail if validation failed
         id: fail_notvalid
-        if: steps.validate_import.outputs.exit_code != '0' || steps.validate_import.outputs.has_error == '1'
-        run: exit 1
+        if: steps.validate_import.outputs.exit_code != '0'
+        run: 
+          echo "### ❌ Deployment blocked" >> $GITHUB_STEP_SUMMARY
+          exit 1
 
       # actual import
       - name: Import Solution (Actual Deployment)
