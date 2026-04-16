@@ -266,8 +266,9 @@ jobs:
       - name: Fail if validation failed
         id: fail_notvalid
         if: steps.validate_import.outputs.exit_code != '0' || steps.analyse.outputs.has_error == '1'
-        run: 
+        run: |
           echo "### ❌ Deployment blocked" >> $GITHUB_STEP_SUMMARY
+          echo "::error title=Deployment Blocked::Validation failed (dependencies or import errors)"
           exit 1
 
       # actual import
