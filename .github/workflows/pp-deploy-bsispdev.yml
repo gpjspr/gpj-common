@@ -140,7 +140,7 @@ jobs:
         run: |
           echo "$(dirname "${POWERPLATFORMTOOLS_PACPATH}")" >> "$GITHUB_PATH"
        
-      #Authenticate to Power Platform
+      # Authenticate to Power Platform
       - name: PAC federated
         id: pac_authenticate
         shell: bash
@@ -152,51 +152,133 @@ jobs:
             --applicationId ${{ env.AZ_CLIENT_ID }} \
             --environment ${{ inputs.pp_env_url }}
           pac auth who
-        
-      # Import solution
-      - name: PAC import
+
+      # validate import
+      - name: Validate Deployment (PAC Import Analysis)
+        id: validate_import
         continue-on-error: true
-        id: pac_import
-        shell: bash
         run: |
+          set -o pipefail
+      
           pac solution import \
-            --path ./artifact/${{ inputs.solutionname }}.zip \
-            --environment ${{ inputs.pp_env_url }} \
+            --path "./artifact/${{ inputs.solutionname }}.zip" \
+            --environment "${{ inputs.pp_env_url }}" \
+            --publish-changes false \
+            --async false \
             2>&1 | tee import.log
+      
+          echo "exit_code=$?" >> $GITHUB_OUTPUT
             
-      #any dependencies      
-      - name: Extract Missing Dependencies
+      
+      - name: Analyse Deployment Errors
+        id: analyse
         if: always()
         run: |
-          sed -n '/<MissingDependencies/,/<\/MissingDependencies>/p' import.log > missing.xml || true
+          LOG=import.log
+          HAS_ERROR=0
       
-          if [ ! -s missing.xml ]; then
-            echo "### ✅ No missing dependencies found" >> $GITHUB_STEP_SUMMARY
-            exit 0
-          else
-            echo "❌ Deployment failed due to missing dependencies" >> $GITHUB_STEP_SUMMARY
-            exit 1
+          echo "## 🚀 Deployment Validation Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+      
+          # -------------------------------
+          # Missing Dependencies
+          # -------------------------------
+          if grep -q "<MissingDependencies" $LOG; then
+            echo "### ❌ Deployment blocked: missing dependencies detected" >> $GITHUB_STEP_SUMMARY
+      
+            sed -n '/<MissingDependencies/,/<\/MissingDependencies>/p' $LOG > missing.xml || true
+      
+            echo "<root>" > fixed.xml
+            cat missing.xml >> fixed.xml
+            echo "</root>" >> fixed.xml
+      
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Type | Required | Used By |" >> $GITHUB_STEP_SUMMARY
+            echo "|------|----------|---------|" >> $GITHUB_STEP_SUMMARY
+      
+            COUNT=$(xmllint --xpath "count(//MissingDependency)" fixed.xml 2>/dev/null || echo 0)
+      
+            for i in $(seq 1 $COUNT); do
+              TYPE=$(xmllint --xpath "string((//MissingDependency)[$i]/Required/@type)" fixed.xml)
+              REQUIRED=$(xmllint --xpath "string((//MissingDependency)[$i]/Required/@displayName)" fixed.xml)
+              DEPENDENT=$(xmllint --xpath "string((//MissingDependency)[$i]/Dependent/@displayName)" fixed.xml)
+      
+              echo "| $TYPE | $REQUIRED | $DEPENDENT |" >> $GITHUB_STEP_SUMMARY
+            done
+      
+            HAS_ERROR=1
           fi
-          
-      #install xmllint
-      - name: Install xmllint
-        id: install_xmllint_extract
-        run: sudo apt-get update && sudo apt-get install -y libxml2-utils
-
-      # normalise xml
-      - name: Normalize XML
-        run: |
-          echo "<root>" > fixed.xml
-          cat missing.xml >> fixed.xml
-          echo "</root>" >> fixed.xml
-
-      # capture errors
-      - name: Parse Missing Dependencies
-        run: |
-          MISSING_COUNT=$(xmllint --xpath 'count(//MissingDependencies/MissingDependency)' "fixed.xml" 2>/dev/null)
-          if [[ "$MISSING_COUNT" -gt 0 ]]; then
-            echo "❌ Deployment failed due to missing dependencies" >> $GITHUB_STEP_SUMMARY
-            echo "::warning::Found $MISSING_COUNT missing dependencies in the solution"
+      
+          # -------------------------------
+          # Version downgrade
+          # -------------------------------
+          if grep -qi "version.*lower" $LOG || grep -qi "cannot import.*older version" $LOG; then
+            echo "### ❌ Deployment blocked: version number is lower than current installed version" >> $GITHUB_STEP_SUMMARY
+            HAS_ERROR=1
           fi
+      
+          # -------------------------------
+          # Managed/Unmanaged conflict
+          # -------------------------------
+          if grep -qi "managed.*cannot be imported as unmanaged" $LOG; then
+            echo "### ❌ Deployment blocked: managed/unmanaged solution conflict" >> $GITHUB_STEP_SUMMARY
+            HAS_ERROR=1
+          fi
+      
+          # -------------------------------
+          # Publisher mismatch
+          # -------------------------------
+          if grep -qi "publisher" $LOG && grep -qi "mismatch" $LOG; then
+            echo "### ❌ Deployment blocked: publisher mismatch detected" >> $GITHUB_STEP_SUMMARY
+            HAS_ERROR=1
+          fi
+      
+          # -------------------------------
+          # Missing connection reference (fallback text detection)
+          # -------------------------------
+          if grep -qi "connectionreference" $LOG && grep -qi "missing" $LOG; then
+            echo "### ❌ Deployment blocked: missing connection references" >> $GITHUB_STEP_SUMMARY
+            HAS_ERROR=1
+          fi
+      
+          # -------------------------------
+          # Generic failure fallback
+          # -------------------------------
+          if [ "$HAS_ERROR" -eq 0 ] && grep -qi "error" $LOG; then
+            echo "### ❌ Deployment failed: unknown error" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "#### Extract:" >> $GITHUB_STEP_SUMMARY
+            grep -i "error" $LOG | head -20 >> $GITHUB_STEP_SUMMARY
+            HAS_ERROR=1
+          fi
+      
+          # -------------------------------
+          # Success
+          # -------------------------------
+          if [ "$HAS_ERROR" -eq 0 ]; then
+            echo "### ✅ No blocking deployment issues detected" >> $GITHUB_STEP_SUMMARY
+          fi
+      
+          # Save result
+          echo "has_error=$HAS_ERROR" >> $GITHUB_OUTPUT  
           
-          
+      # fail if not valid
+      - name: Fail if validation failed
+        id: fail_notvalid
+        if: steps.validate_import.outputs.exit_code != '0' || steps.validate_import.outputs.has_error == '1'
+        run: exit 1
+
+      # actual import
+      - name: Import Solution (Actual Deployment)
+        if: steps.analyse.outputs.has_error == '0'
+        id: import_real
+        run: |
+          set -o pipefail
+      
+          pac solution import \
+            --path "./artifact/${{ inputs.solutionname }}.zip" \
+            --environment "${{ inputs.pp_env_url }}" \
+            --publish-changes true \
+            --async false \
+            2>&1 | tee import-final.log
+      
