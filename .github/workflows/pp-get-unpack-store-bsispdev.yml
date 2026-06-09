@@ -389,6 +389,9 @@ jobs:
           $existing = Get-Content $existingFile -Raw | ConvertFrom-Json
           $new = Get-Content $tempFile -Raw | ConvertFrom-Json
 
+          $existingVars = @($existing.EnvironmentVariables)
+          $newVars = @($new.EnvironmentVariables)
+
           $added = @()
           $removed = @()
           $summaryFile = $env:GITHUB_STEP_SUMMARY
@@ -400,23 +403,24 @@ jobs:
             throw "Existing DEV settings file not found at $existingFile."
           }
           
-          foreach ($param in $new.EnvironmentVariables) {
-              $match = $existing.EnvironmentVariables | Where-Object { $_.SchemaName -eq $param.SchemaName }
+          foreach ($param in $newVars) {
+              $match = $existingVars | Where-Object { $_.SchemaName -eq $param.SchemaName }
               if (-Not $match) {
                   $added += $param
                   Write-Host "::warning::New setting detected: $($param.SchemaName)"
-                  $existing.EnvironmentVariables += $param
               }
           }
 
-          foreach ($param in $existing.EnvironmentVariables) {
-              if (-Not ($new.EnvironmentVariables | Where-Object { $_.SchemaName -eq $param.SchemaName })) {
+          # Removed settings: in DEV, no longer in export (check against ORIGINAL list)
+          foreach ($param in $existingVars) {
+              if (-Not ($newVars | Where-Object { $_.SchemaName -eq $param.SchemaName })) {
                   Write-Host "::warning::setting removed: $($param.SchemaName)"
                   $removed += $param
               }
           }
       
           if ($added.Count -gt 0) {
+            $existing.EnvironmentVariables = $existingVars + $added
             Add-Content $summaryFile "### 🟢 New Settings Detected"
             Add-Content $summaryFile "| SchemaName | DefaultValue |"
             Add-Content $summaryFile "|------------|-------------|"
