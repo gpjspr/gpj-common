@@ -162,6 +162,14 @@ jobs:
           --name "${{ inputs.solutionname }}" \
           --managed false \
           --overwrite
+          
+      # publish unmanaged solution as artifact for later
+      - name: Publish Unmanaged Solution as Artifact
+        id: artifact_unmanaged_zip
+        uses: action/upload-artifact@v4
+        with:
+          name: unmanaged-solution-zip
+          path: ./exports/unmanaged/${{ inputs.solutionname }}.zip
 
       - name: Export Managed Solution
         id: export_managed
@@ -338,7 +346,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: export-solution
     if: needs.export-solution.outputs.config_exists == 'true'
-    continue-on-error: true
+    continue-on-error: false
        
     steps:
        # Checkout the CALLING repo (not the shared repo)
@@ -359,10 +367,19 @@ jobs:
         run: |
           echo "$(dirname "${POWERPLATFORMTOOLS_PACPATH}")" >> "$GITHUB_PATH"
 
+      # Get Solution zip Artifact
+      - name: Download unmanaged zip artifact
+        id: download_unmanaged_zip
+        uses: actions/download-artifact@v4
+        with:
+          name: unmanaged-solution-zip
+          path: ./exports/unmanaged
+          
       # Create temporary settings file
       - name: Temporary Settings File
         shell: pwsh
         run: |
+          $solutionZip = "./exports/unmanaged/${{ inputs.solutionname }}.zip"
           $settingsPath = "configuration/${{ inputs.solutionname }}-settings.json"
           pac solution create-settings --solution-zip "./exports/unmanaged/${{ inputs.solutionname }}.zip" --settings-file $settingsPath
           
@@ -375,6 +392,13 @@ jobs:
           $added = @()
           $removed = @()
           $summaryFile = $env:GITHUB_STEP_SUMMARY
+
+          if (-Not (Test-Path $solutionZip)) {
+            throw "Solution zip not found at $solutionZip. The unmanaged-solution-zip artifact was not downloaded."
+          }
+          if (-Not (Test-Path $existingFile)) {
+            throw "Existing DEV settings file not found at $existingFile."
+          }
           
           foreach ($param in $new.EnvironmentVariables) {
               $match = $existing.EnvironmentVariables | Where-Object { $_.SchemaName -eq $param.SchemaName }
