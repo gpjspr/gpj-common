@@ -166,7 +166,7 @@ jobs:
       # publish unmanaged solution as artifact for later
       - name: Publish Unmanaged Solution as Artifact
         id: artifact_unmanaged_zip
-        uses: action/upload-artifact@v4
+        uses: actions/upload-artifact@v4
         with:
           name: unmanaged-solution-zip
           path: ./exports/unmanaged/${{ inputs.solutionname }}.zip
