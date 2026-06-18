@@ -1,0 +1,241 @@
+---
+name: Configure New GitHub Repository
+
+#    Prerequisites
+#    Repository variable  GIT_ADMIN_PAT  - PAT with scopes: repo, admin:org
+#    GH CLI is pre-installed on ubuntu-latest runners
+
+
+on:
+  workflow_dispatch:
+    inputs:
+
+      repo_name:
+        description: 'Target repository name (without owner/org prefix)'
+        required: true
+        type: string
+
+      pp_solution_name:
+        description: 'PP_SOLUTION_NAME - value for the repository variable'
+        required: true
+        type: string
+
+      pp_site_url_dev:
+        description: 'PP_SITE_URL for DEV  (blank - TBC)'
+        required: false
+        default: 'TBC'
+        type: string
+
+      pp_site_url_test:
+        description: 'PP_SITE_URL for TEST (blank - TBC)'
+        required: false
+        default: 'TBC'
+        type: string
+
+      pp_site_url_uat:
+        description: 'PP_SITE_URL for UAT  (blank - TBC)'
+        required: false
+        default: 'TBC'
+        type: string
+
+      pp_site_url_prod:
+        description: 'PP_SITE_URL for PROD (blank - TBC)'
+        required: false
+        default: 'TBC'
+        type: string
+
+jobs:
+  configure-repo:
+    runs-on: ubuntu-latest
+
+    env:
+      GH_TOKEN: ${{ vars.GIT_ADMIN_PAT }}
+
+    steps:
+
+      #  Pre-flight: validate token 
+      - name: Validate GIT_ADMIN_PAT
+        shell: bash
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::Repository variable GIT_ADMIN_PAT is not set."
+            exit 1
+          fi
+          gh auth status
+
+      #  Main configuration step 
+      - name: Configure repository
+        id: configure
+        shell: bash
+        run: |
+          set +e          # handle errors manually; never abort mid-script
+
+          #  Resolve inputs 
+          REPO_NAME="${{ inputs.repo_name }}"
+          PP_SOLUTION_NAME="${{ inputs.pp_solution_name }}"
+
+          # GitHub Actions sends the default value when the user leaves a field
+          # blank, but guard with shell fallback too just in case.
+          PP_SITE_URL_DEV="${{ inputs.pp_site_url_dev }}";   PP_SITE_URL_DEV="${PP_SITE_URL_DEV:-TBC}"
+          PP_SITE_URL_TEST="${{ inputs.pp_site_url_test }}"; PP_SITE_URL_TEST="${PP_SITE_URL_TEST:-TBC}"
+          PP_SITE_URL_UAT="${{ inputs.pp_site_url_uat }}";   PP_SITE_URL_UAT="${PP_SITE_URL_UAT:-TBC}"
+          PP_SITE_URL_PROD="${{ inputs.pp_site_url_prod }}"; PP_SITE_URL_PROD="${PP_SITE_URL_PROD:-TBC}"
+
+          #  Resolve owner from the PAT 
+          OWNER=$(gh api user --jq '.login' 2>&1)
+          if [ $? -ne 0 ]; then
+            echo "::error::Could not resolve owner - check GIT_ADMIN_PAT is valid: $OWNER"
+            exit 1
+          fi
+          REPO="$OWNER/$REPO_NAME"
+          echo "Target repository: $REPO"
+
+          #  Result tracking 
+          declare -a ROWS=()
+          ERRORS=0
+
+          ok() {
+            ROWS+=("| ✅ | $1 |")
+            echo "  OK: $1"
+          }
+
+          fail() {
+            ROWS+=("| ❌ | $1 |")
+            echo "FAIL: $1"
+            ERRORS=$((ERRORS + 1))
+          }
+
+          # Wrapper: run a gh api call and record pass/fail.
+          # Usage: api_call "Human description" [gh api args...]
+          api_call() {
+            local desc="$1"; shift
+            local out
+            out=$(gh api "$@" 2>&1)
+            local rc=$?
+            if [ $rc -eq 0 ]; then
+              ok "$desc"
+            else
+              fail "$desc - \`${out}\`"
+            fi
+          }
+
+          #  1. Create environments 
+          echo ""
+          echo "==> Creating environments"
+          for ENV_NAME in DEV TEST UAT PROD; do
+            api_call "Create environment \`$ENV_NAME\`" \
+              --method PUT "repos/$REPO/environments/$ENV_NAME"
+          done
+
+          #  2. Fetch collaborators (write+) for PROD approvers 
+          echo ""
+          echo "==> Fetching collaborators for PROD approvers"
+
+          # Capture gh output separately so pipeline exit code is gh's, not jq's
+          COLLABS_RAW=$(gh api \
+            "repos/$REPO/collaborators?permission=push&per_page=100" \
+            --paginate --jq '[.[] | {type:"User",id:.id}]' 2>&1)
+          COLLABS_RC=$?
+
+          if [ $COLLABS_RC -ne 0 ]; then
+            fail "Fetch collaborators - \`$COLLABS_RAW\`"
+            REVIEWERS_JSON="[]"
+          else
+            # jq -s merges per-page arrays into one: [[...],[...]] - [...]
+            REVIEWERS_JSON=$(echo "$COLLABS_RAW" | jq -s 'add // []')
+            COUNT=$(echo "$REVIEWERS_JSON" | jq 'length')
+            ok "Fetched $COUNT collaborator(s) as PROD approvers"
+          fi
+
+          #  3. Configure PROD environment protection 
+          echo ""
+          echo "==> Configuring PROD environment"
+
+          PROD_BODY=$(jq -n \
+            --argjson rev "$REVIEWERS_JSON" '{
+              prevent_self_review: false,
+              reviewers: $rev,
+              deployment_branch_policy: {
+                protected_branches: false,
+                custom_branch_policies: true
+              }
+            }')
+
+          PROD_OUT=$(echo "$PROD_BODY" | \
+            gh api --method PUT "repos/$REPO/environments/PROD" --input - 2>&1)
+          if [ $? -eq 0 ]; then
+            ok "PROD: protection rules applied (\`prevent_self_review\` disabled)"
+          else
+            fail "PROD: protection rules - \`$PROD_OUT\`"
+          fi
+
+          BP_OUT=$(gh api --method POST \
+            "repos/$REPO/environments/PROD/deployment-branch-policies" \
+            -f name="releases/*" -f type="branch" 2>&1)
+          if [ $? -eq 0 ]; then
+            ok "PROD: branch policy \`releases/*\` added"
+          else
+            fail "PROD: branch policy - \`$BP_OUT\`"
+          fi
+
+          #  4. Environment variables 
+          echo ""
+          echo "==> Creating environment variables"
+
+          declare -A PP_ENV_URL=([DEV]="abc" [TEST]="efg" [UAT]="hij" [PROD]="klm")
+          declare -A PP_SITE_URL=(
+            [DEV]="$PP_SITE_URL_DEV"
+            [TEST]="$PP_SITE_URL_TEST"
+            [UAT]="$PP_SITE_URL_UAT"
+            [PROD]="$PP_SITE_URL_PROD"
+          )
+
+          for ENV_NAME in DEV TEST UAT PROD; do
+            URL_VAL="${PP_ENV_URL[$ENV_NAME]}"
+            SITE_VAL="${PP_SITE_URL[$ENV_NAME]}"
+
+            api_call "\`$ENV_NAME\` > PP_ENV_URL = \`$URL_VAL\`" \
+              --method POST "repos/$REPO/environments/$ENV_NAME/variables" \
+              -f name="PP_ENV_URL" -f value="$URL_VAL"
+
+            api_call "\`$ENV_NAME\` > PP_SITE_URL = \`$SITE_VAL\`" \
+              --method POST "repos/$REPO/environments/$ENV_NAME/variables" \
+              -f name="PP_SITE_URL" -f value="$SITE_VAL"
+          done
+
+          #  5. Repository variable 
+          echo ""
+          echo "==> Creating repository variable"
+          api_call "Repository variable PP_SOLUTION_NAME = \`$PP_SOLUTION_NAME\`" \
+            --method POST "repos/$REPO/actions/variables" \
+            -f name="PP_SOLUTION_NAME" -f value="$PP_SOLUTION_NAME"
+
+          #  Write job summary 
+          {
+            if [ $ERRORS -eq 0 ]; then
+              echo "## ✅ Repository configuration complete"
+            else
+              echo "## ⚠️ Configuration finished with $ERRORS error(s)"
+            fi
+
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| **Repository** | \`$REPO\` |"
+            echo "| **Triggered by** | @${{ github.actor }} |"
+            echo "| **Run** | [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) |"
+            echo ""
+            echo "### Operations"
+            echo ""
+            echo "| Status | Detail |"
+            echo "|--------|--------|"
+            for row in "${ROWS[@]}"; do
+              echo "$row"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # Fail the step (and the job) if any operation errored
+          if [ $ERRORS -gt 0 ]; then
+            echo "::error::Configuration completed with $ERRORS error(s). See the job summary for details."
+            exit 1
+          fi
