@@ -1,7 +1,7 @@
 ---
-name: Configure New GitHub Repository
+name: Configure GitHub Repository
 
-#    Prerequisites
+# Prerequisites
 #    Repository variable  GIT_ADMIN_PAT  - PAT with scopes: repo, admin:org
 #    GH CLI is pre-installed on ubuntu-latest runners
 
@@ -47,6 +47,7 @@ on:
 jobs:
   configure-repo:
     runs-on: ubuntu-latest
+    name: Configure New Repo
 
     env:
       GH_TOKEN: ${{ vars.GIT_ADMIN_PAT }}
