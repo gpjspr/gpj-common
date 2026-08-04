@@ -17,146 +17,130 @@ on:
       siteurl:
         required: true
         type: string
-
-     
+    outputs:
+      hasError:
+        description: 'true if the site or any list could not be reached'
+        value: ${{ jobs.export-solution.outputs.hasError }}
+ 
 env:
   BUILD_VERSION: 1.0.0.0
   AZ_TENANT_ID: d3e62a06-7979-468d-a1a1-110e7c24c8d1
   AZ_CLIENT_ID: 3df7eaa5-11a5-4e72-9c44-04715669df8b
   SP_TENANT: https://bsispdev.sharepoint.com
-
+ 
 jobs:
+  determine-environment:
+    name: Determine environment from branch
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.set_env.outputs.environment }}
+    steps:
+      - name: Map branch to environment
+        id: set_env
+        shell: bash
+        run: |
+          BRANCH="${{ github.ref_name }}"
+          case "$BRANCH" in
+            test/*)     ENVIRONMENT=TEST ;;
+            uat/*)      ENVIRONMENT=UAT ;;
+            releases/*) ENVIRONMENT=PROD ;;
+            *)          ENVIRONMENT=DEV ;;
+          esac
+          echo "Branch '$BRANCH' -> environment '$ENVIRONMENT'"
+          echo "environment=$ENVIRONMENT" >> "$GITHUB_OUTPUT"
+ 
   export-solution:
     name: Export Schema
+    needs: determine-environment
     runs-on: ubuntu-latest
-
+    environment: ${{ needs.determine-environment.outputs.environment }}
+    outputs:
+      hasError: ${{ steps.check_schema.outputs.hasError }}
     steps:
-        # Install PnP
+      # Install PnP
       - name: Install PowerShell and PnP PowerShell
         id: install_pnp
         run: |
           sudo apt-get update
           sudo apt-get install -y powershell
           pwsh -Command "Install-Module PnP.PowerShell -Force -Scope CurrentUser"
-
-        # Checkout the CALLING repo (not the shared repo)
+ 
+      # Checkout the CALLING repo (not the shared repo)
       - name: Checkout repo
         id: checkout_repo
         uses: actions/checkout@v4
         with:
           ref: ${{ github.ref }}
-  
-        # Azure login (OIDC)
+ 
+      # Azure login (OIDC)
       - name: Az CLI login
         id: az_login
         uses: azure/login@v2
         with:
-            # these need to be EDF items. Do not need to store as variables, are constant. Are not secrets
+          # these need to be EDF items. Do not need to store as variables, are constant. Are not secrets
           client-id: ${{ env.AZ_CLIENT_ID }}
           tenant-id: ${{ env.AZ_TENANT_ID }}
           allow-no-subscriptions: true
-
-        # check sharepointconfig folder
-      - name: Check Solution folder
-        id: check_folders
-        run: |
-            mkdir -p sharepointconfig
-        
-        #connect pnp and get schema 
-      - name: Export SharePoint PnP site template
-        id: export_sitetemplate
+ 
+      # Validate the SharePoint site and lists defined in the settings JSON still resolve
+      - name: Check SharePoint Settings
+        id: check_config_settings
         shell: pwsh
         run: |
-          $arguments = "${{ inputs.arguments }}"
-
-          # default if empty
-          if ([string]::IsNullOrWhiteSpace($arguments)) {
-              $handlers = @("Lists")
-          } else {
-              # very simple split (assumes format: "-Handlers Lists,Pages,ContentTypes")
-              if ($arguments -match "-Handlers\s+(.+)") {
-                  $handlers = $matches[1] -split ','
+          $configPath = "./configuration/${{ needs.determine-environment.outputs.environment }}/${{ inputs.solutionname }}-settings.json"
+          $configjson = Get-Content -Raw -Path $configPath | ConvertFrom-Json
+          $hasError = $false
+ 
+          # get site url and list ids from the settings file
+          $siteUrl = ($configjson.EnvironmentVariables | Where-Object {
+              $_.ParameterKey -eq 'dataset' -and $_.ApiId -eq '/providers/microsoft.powerapps/apis/shared_sharepointonline'
+          }).Value
+          $lists = ($configjson.EnvironmentVariables | Where-Object {
+              $_.ParameterKey -eq 'table' -and $_.ApiId -eq '/providers/microsoft.powerapps/apis/shared_sharepointonline'
+          }).Value
+ 
+          "## SharePoint schema check - ${{ needs.determine-environment.outputs.environment }}" >> $env:GITHUB_STEP_SUMMARY
+          "Site: $siteUrl" >> $env:GITHUB_STEP_SUMMARY
+          "" >> $env:GITHUB_STEP_SUMMARY
+ 
+          Write-Host "Checking site $siteUrl"
+          $token = az account get-access-token --resource ${{ env.SP_TENANT }} --query accessToken -o tsv
+          Connect-PnPOnline -Url "${{ inputs.siteurl }}" -AccessToken $token
+ 
+          try {
+              $pnpweb = Get-PnPWeb -ErrorAction Stop
+          }
+          catch {
+              $msg = "Site not available: ${{ inputs.siteurl }}"
+              Write-Host "::error::$msg"
+              "- :x: $msg" >> $env:GITHUB_STEP_SUMMARY
+              $hasError = $true
+          }
+ 
+          foreach ($list in $lists) {
+              Write-Host "Checking list $list"
+              try {
+                  $pnplist = Get-PnPList -Identity $list -ErrorAction Stop
+                  "- :white_check_mark: List OK: $list" >> $env:GITHUB_STEP_SUMMARY
+              }
+              catch {
+                  $msg = "Error with list $list"
+                  Write-Host "::error::$msg"
+                  "- :x: $msg" >> $env:GITHUB_STEP_SUMMARY
+                  $hasError = $true
               }
           }
-          
-          Write-Host "Using handlers: $handlers"
-          $token = az account get-access-token --resource ${{ env.SP_TENANT}} --query accessToken -o tsv
-          Connect-PnPOnline -Url ${{ inputs.siteurl }} -AccessToken $token
-          Get-PnPSiteTemplate -Out "./sharepointconfig/${{ inputs.solutionname }}.xml" -Handlers $handlers -Force
-
-        # install xml tooling
-      - name: Install xmlstarlet
-        run: sudo apt-get install -y xmlstarlet
-
-        # update PnP file
-      - name: Update XML IDs
-        run: |
-          FILE="./sharepointconfig/${{ inputs.solutionname }}.xml"
-      
-          xmlstarlet ed -L \
-            -N pnp="http://schemas.dev.office.com/PnP/2022/09/ProvisioningSchema" \
-            -u "//pnp:Templates/@ID" -v "CONTAINER-${{ inputs.solutionname }}" \
-            -u "//pnp:ProvisioningTemplate/@ID" -v "TEMPLATE-${{ inputs.solutionname }}" \
-            "$FILE"
-
-          xmlstarlet ed -L \
-            -N pnp="http://schemas.dev.office.com/PnP/2022/09/ProvisioningSchema" \
-            -d "//pnp:ListInstance[@Title='Site Pages']" \
-            "$FILE"
-
-          xmlstarlet ed -L \
-            -N pnp="http://schemas.dev.office.com/PnP/2022/09/ProvisioningSchema" \
-            -d "//pnp:ListInstance[@Title='Version Lookup List']" \
-            "$FILE"
-
-          xmlstarlet ed -L \
-            -N pnp="http://schemas.dev.office.com/PnP/2022/09/ProvisioningSchema" \
-            -d "//pnp:ListInstance[@Title='SForm Templates']" \
-            "$FILE"
-
-          xmlstarlet ed -L \
-            -N pnp="http://schemas.dev.office.com/PnP/2022/09/ProvisioningSchema" \
-            -d "//pnp:ListInstance[@Title='Site Assets]'" \
-            "$FILE"
-
-          xmlstarlet ed -L \
-            -N pnp="http://schemas.dev.office.com/PnP/2022/09/ProvisioningSchema" \
-            -d "//pnp:ListInstance[@Title='Style Library']" \
-            "$FILE"
-
-          xmlstarlet ed -L \
-            -N pnp="http://schemas.dev.office.com/PnP/2022/09/ProvisioningSchema" \
-            -d "//pnp:ProvisioningTemplate/@BaseSiteTemplate" \
-            "$FILE"
-
-          xmlstarlet ed -L \
-            -N pnp="http://schemas.dev.office.com/PnP/2022/09/ProvisioningSchema" \
-            -d "//pnp:ProvisioningTemplate/@Scope" \
-            "$FILE"
-
-          # delete all instances of created field, as should exist and seems to throw error
-           xmlstarlet ed -L \
-            -N pnp="http://schemas.dev.office.com/PnP/2022/09/ProvisioningSchema" \
-            -d "//pnp:FieldRef[@ID='998b5cff-4a35-47a7-92f3-3914aa6aa4a2']" \
-            "$FILE"
-            
-        # commit the changes
-      - name: Commit changes
-        id: commit_changes
-        run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "actions@github.com"
-          git add .
-          if git diff --cached --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "Update SharePoint schema file"
-            git pull --rebase origin ${GITHUB_REF_NAME}
-            git push origin HEAD:${GITHUB_REF_NAME}
-          fi
-
-      # push to the repo
-      - name: Push changes
-        id: push_repo
-        if: success()
-        run: git push origin HEAD
+ 
+          "" >> $env:GITHUB_STEP_SUMMARY
+          if ($hasError) {
+              "**Result: FAILED**" >> $env:GITHUB_STEP_SUMMARY
+          } else {
+              "**Result: PASSED**" >> $env:GITHUB_STEP_SUMMARY
+          }
+ 
+          Write-Host "hasError=$hasError"
+          "hasError=$hasError" >> $env:GITHUB_OUTPUT
+ 
+          if ($hasError) {
+              exit 1
+          }
