@@ -104,7 +104,7 @@ jobs:
           "" >> $env:GITHUB_STEP_SUMMARY
  
           Write-Host "Checking site $siteUrl"
-          $token = az account get-access-token --resource ${{ env.SP_TENANT }} --query accessToken -o tsv
+          $token = az account get-access-token --resource https://bsispdev.sharepoint.com --query accessToken -o tsv
           Connect-PnPOnline -Url "${{ inputs.siteurl }}" -AccessToken $token
           Get-PnPWeb
  
