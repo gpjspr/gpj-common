@@ -105,6 +105,9 @@ jobs:
  
           Write-Host "Checking site $siteUrl"
           $token = az account get-access-token --resource ${{ env.SP_TENANT }} --query accessToken -o tsv
+          $payload = ($token -split '\.')[1]
+          $payload += '=' * ((4 - $payload.Length % 4) % 4)
+          [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($payload)) | ConvertFrom-Json | Select-Object appid, roles, upn, aud
           Connect-PnPOnline -Url "${{ inputs.siteurl }}" -AccessToken $token
           Get-PnPWeb
  
