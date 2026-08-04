@@ -99,13 +99,14 @@ jobs:
               $_.ParameterKey -eq 'table' -and $_.ApiId -eq '/providers/microsoft.powerapps/apis/shared_sharepointonline'
           }).Value
  
-          "## SharePoint schema check - ${{ needs.determine-environment.outputs.environment }}" >> $env:GITHUB_STEP_SUMMARY
+          "## SharePoint config check - ${{ needs.determine-environment.outputs.environment }}" >> $env:GITHUB_STEP_SUMMARY
           "Site: $siteUrl" >> $env:GITHUB_STEP_SUMMARY
           "" >> $env:GITHUB_STEP_SUMMARY
  
           Write-Host "Checking site $siteUrl"
           $token = az account get-access-token --resource ${{ env.SP_TENANT }} --query accessToken -o tsv
           Connect-PnPOnline -Url "${{ inputs.siteurl }}" -AccessToken $token
+          Get-PnPWeb
  
           try {
               $pnpweb = Get-PnPWeb -ErrorAction Stop
