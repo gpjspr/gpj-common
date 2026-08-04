@@ -144,6 +144,4 @@ jobs:
           if ($hasError) {
               exit 1
           }
-        id: push_repo
-        if: success()
-        run: git push origin HEAD
+
