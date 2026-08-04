@@ -1,0 +1,10 @@
+﻿[
+    {
+        "repo":  "actions",
+        "solution":  "DevOPsTesting",
+        "provisioned":  true,
+        "exported":  true,
+        "comments":  "",
+        "updateworkflows":  false
+    }
+]
