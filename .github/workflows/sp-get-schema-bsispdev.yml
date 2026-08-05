@@ -113,6 +113,8 @@ jobs:
  
           try {
               $pnpweb = Get-PnPWeb -ErrorAction Stop
+              Write-Host "web details..."
+              Write-Host $pnpweb.Url
           }
           catch {
               $msg = "Site not available: ${{ inputs.siteurl }}"
