@@ -105,7 +105,7 @@ jobs:
  
           Write-Host "Checking site $siteUrl"
           $token = az account get-access-token --resource ${{ env.SP_TENANT }} --query accessToken -o tsv
-          Connect-PnPOnline -Url "${{ inputs.siteurl }}" -AccessToken $token
+          Connect-PnPOnline -Url $siteUrl -AccessToken $token
           try {
               $pnpweb = Get-PnPWeb -ErrorAction Stop
               Write-Host "web details..."
