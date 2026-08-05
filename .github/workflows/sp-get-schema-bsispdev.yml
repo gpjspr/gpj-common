@@ -131,6 +131,7 @@ jobs:
                   Write-Host "::error::$msg"
                   "- :x: $msg" >> $env:GITHUB_STEP_SUMMARY
                   $hasError = $true
+                  Write-Host "::error::Error with list $list : $($_.Exception.Message)"
               }
           }
  
